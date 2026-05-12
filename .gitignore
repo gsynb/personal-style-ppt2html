@@ -1,0 +1,20 @@
+.DS_Store
+__pycache__/
+*.py[cod]
+
+# Private source decks and generated previews should not be committed by default.
+*.pptx
+*.ppt
+outputs/
+work/
+dist/
+tmp/
+
+# Local browser or test artifacts.
+*.log
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+!assets/**/*

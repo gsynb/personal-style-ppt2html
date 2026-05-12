@@ -1,0 +1,240 @@
+.unit-lockup {
+  position: absolute;
+  top: 34px;
+  left: var(--slide-pad-x);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--academic-muted);
+  font-size: 14px;
+}
+
+.unit-mark {
+  display: grid;
+  width: 44px;
+  height: 24px;
+  place-items: center;
+  border: 1px solid var(--academic-rule);
+  color: var(--academic-accent);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.unit-name {
+  white-space: nowrap;
+}
+
+.title-slide {
+  display: grid;
+  align-content: center;
+}
+
+.title-block {
+  display: grid;
+  gap: 18px;
+}
+
+.kicker {
+  color: var(--academic-accent);
+  font-size: clamp(15px, 1.5vw, 19px);
+  font-weight: 650;
+}
+
+.subtitle {
+  max-width: 760px;
+  color: var(--academic-muted);
+  font-size: clamp(16px, 1.8vw, 22px);
+}
+
+.slide-footer {
+  position: absolute;
+  left: var(--slide-pad-x);
+  right: var(--slide-pad-x);
+  bottom: 30px;
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  border-top: 1px solid var(--academic-rule);
+  padding-top: 14px;
+  color: var(--academic-muted);
+  font-size: clamp(12px, 1.1vw, 15px);
+}
+
+.outline-slide {
+  display: grid;
+  align-content: start;
+  gap: 72px;
+}
+
+.outline-slide h2 {
+  text-align: center;
+}
+
+.outline-list {
+  display: grid;
+  gap: 24px;
+  list-style: none;
+  margin-inline: auto;
+  width: min(760px, 100%);
+}
+
+.outline-list li {
+  display: grid;
+  grid-template-columns: 76px 1fr;
+  align-items: baseline;
+  gap: 24px;
+  border-bottom: 1px solid var(--academic-rule);
+  padding-bottom: 18px;
+}
+
+.outline-list span {
+  color: var(--academic-accent);
+  font-size: clamp(22px, 3vw, 36px);
+  font-weight: 700;
+}
+
+.outline-list strong {
+  font-size: clamp(22px, 2.6vw, 34px);
+  font-weight: 620;
+}
+
+.two-column {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.75fr);
+  gap: 44px;
+  margin-top: 42px;
+}
+
+.figure-frame,
+.comparison-grid figure {
+  display: grid;
+  align-content: start;
+}
+
+.figure-placeholder,
+.chart-placeholder {
+  display: grid;
+  min-height: 330px;
+  place-items: center;
+  border: 1px solid var(--academic-rule);
+  background: #fafafa;
+  color: var(--academic-muted);
+  font-size: 16px;
+}
+
+.claim-panel {
+  display: grid;
+  align-content: start;
+  gap: 24px;
+  border-left: 3px solid var(--academic-accent);
+  padding-left: 24px;
+}
+
+.claim {
+  font-size: clamp(20px, 2.1vw, 28px);
+  line-height: 1.32;
+  font-weight: 620;
+}
+
+.claim-panel ul {
+  display: grid;
+  gap: 12px;
+  padding-left: 20px;
+  color: var(--academic-text);
+  font-size: clamp(15px, 1.45vw, 18px);
+}
+
+.method-flow {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(120px, 1fr));
+  align-items: center;
+  gap: 12px;
+  margin-top: 78px;
+}
+
+.flow-node {
+  display: grid;
+  min-height: 90px;
+  place-items: center;
+  border: 1px solid var(--academic-rule);
+  padding: 12px;
+  text-align: center;
+  font-size: clamp(14px, 1.4vw, 18px);
+  font-weight: 620;
+}
+
+.flow-arrow {
+  height: 1px;
+  background: var(--academic-accent);
+}
+
+.flow-arrow::after {
+  content: "";
+  display: block;
+  width: 8px;
+  height: 8px;
+  margin-left: auto;
+  transform: translateY(-3.5px) rotate(45deg);
+  border-top: 1px solid var(--academic-accent);
+  border-right: 1px solid var(--academic-accent);
+}
+
+.method-notes {
+  margin-top: 52px;
+  max-width: 860px;
+  color: var(--academic-muted);
+  font-size: clamp(15px, 1.45vw, 18px);
+}
+
+.comparison-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 46px;
+  margin-top: 52px;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+  margin-top: 64px;
+  font-size: clamp(17px, 1.7vw, 22px);
+}
+
+.summary-grid p {
+  border-top: 2px solid var(--academic-accent);
+  padding-top: 18px;
+}
+
+@media (max-width: 760px) {
+  .unit-lockup,
+  .slide-footer,
+  .academic-citation {
+    position: static;
+  }
+
+  .title-slide,
+  .outline-slide {
+    align-content: start;
+    gap: 36px;
+  }
+
+  .slide-footer,
+  .two-column,
+  .method-flow,
+  .comparison-grid,
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .slide-footer {
+    display: grid;
+    margin-top: auto;
+  }
+
+  .flow-arrow {
+    width: 1px;
+    height: 28px;
+    justify-self: center;
+  }
+}

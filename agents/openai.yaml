@@ -1,0 +1,4 @@
+interface:
+  display_name: "Personal Style PPT2HTML"
+  short_description: "Convert personal PPTX style into HTML"
+  default_prompt: "Use $personal-style-ppt2html to turn my reference PPTX into a serious academic HTML presentation that preserves my personal style."

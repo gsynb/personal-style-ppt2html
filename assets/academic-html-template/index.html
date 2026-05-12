@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Academic HTML Presentation</title>
+    <link rel="stylesheet" href="./theme.css">
+    <link rel="stylesheet" href="./components.css">
+  </head>
+  <body>
+    <main class="academic-deck" id="deck" aria-label="Academic presentation">
+      <section class="academic-slide title-slide">
+        <div class="unit-lockup">
+          <span class="unit-mark">UNIT</span>
+          <span class="unit-name">Research Group / Institution</span>
+        </div>
+        <div class="title-block">
+          <p class="kicker">Group Meeting</p>
+          <h1>Graph Transformers for Material Property Prediction</h1>
+          <p class="subtitle">A restrained academic HTML template derived from reference PPTX style</p>
+        </div>
+        <footer class="slide-footer">
+          <span>Speaker: Name</span>
+          <span>Advisor: Name</span>
+          <span>2026.05.12</span>
+        </footer>
+      </section>
+
+      <section class="academic-slide outline-slide">
+        <h2>Outline</h2>
+        <ol class="outline-list">
+          <li><span>01</span><strong>Background Introduction</strong></li>
+          <li><span>02</span><strong>Method and Architecture</strong></li>
+          <li><span>03</span><strong>Results and Outlook</strong></li>
+        </ol>
+      </section>
+
+      <section class="academic-slide figure-explanation-slide">
+        <h2>Background: Graph Representation</h2>
+        <div class="two-column">
+          <figure class="figure-frame">
+            <div class="figure-placeholder">Insert paper figure or generated schematic</div>
+            <figcaption>Figure 1. Graph tokens, node features, edge features, and distance encoding.</figcaption>
+          </figure>
+          <div class="claim-panel">
+            <p class="claim">The key modeling question is how to preserve local graph structure while enabling long-range attention.</p>
+            <ul>
+              <li>Message passing captures local neighborhoods.</li>
+              <li>Transformer attention captures global dependencies.</li>
+              <li>Material systems require distance-aware structural priors.</li>
+            </ul>
+          </div>
+        </div>
+        <p class="academic-citation">Vaswani et al., Attention is all you need, 2017.</p>
+      </section>
+
+      <section class="academic-slide method-slide">
+        <h2>Method: Graph Transformer Block</h2>
+        <div class="method-flow">
+          <div class="flow-node">Crystal graph</div>
+          <div class="flow-arrow"></div>
+          <div class="flow-node">GCN embedding</div>
+          <div class="flow-arrow"></div>
+          <div class="flow-node">Distance block</div>
+          <div class="flow-arrow"></div>
+          <div class="flow-node">Transformer block</div>
+          <div class="flow-arrow"></div>
+          <div class="flow-node">Property head</div>
+        </div>
+        <div class="method-notes">
+          <p>Use native HTML/SVG/Mermaid for editable mechanism diagrams. Keep generated images for backgrounds, subtle textures, or non-data visual motifs.</p>
+        </div>
+      </section>
+
+      <section class="academic-slide results-slide">
+        <h2>Calculation Results</h2>
+        <div class="comparison-grid">
+          <figure>
+            <div class="chart-placeholder">Baseline chart</div>
+            <figcaption>Baseline: MAE 0.462 eV</figcaption>
+          </figure>
+          <figure>
+            <div class="chart-placeholder">Proposed model chart</div>
+            <figcaption>Proposed: MAE 0.440 eV</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section class="academic-slide summary-slide">
+        <h2>Outlook</h2>
+        <div class="summary-grid">
+          <p><strong>Modeling:</strong> connect graph priors with global attention more explicitly.</p>
+          <p><strong>Data:</strong> preserve unit discipline, exact labels, and citation provenance.</p>
+          <p><strong>Presentation:</strong> use restrained visuals and institution-aware identity.</p>
+        </div>
+      </section>
+    </main>
+    <script src="./slides.js"></script>
+  </body>
+</html>

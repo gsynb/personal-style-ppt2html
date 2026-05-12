@@ -1,0 +1,138 @@
+:root {
+  --academic-bg: #ffffff;
+  --academic-text: #262625;
+  --academic-accent: #315fa8;
+  --academic-muted: #666666;
+  --academic-rule: rgba(38, 38, 37, 0.16);
+  --academic-font: "Microsoft YaHei", "Noto Sans SC", "PingFang SC", Arial, sans-serif;
+  --academic-aspect: 16 / 9;
+  --slide-pad-x: clamp(40px, 5.5vw, 80px);
+  --slide-pad-y: clamp(30px, 4vw, 58px);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: #ececec;
+  color: var(--academic-text);
+  font-family: var(--academic-font);
+}
+
+body {
+  line-height: 1.45;
+}
+
+.academic-deck {
+  display: grid;
+  gap: 28px;
+  justify-items: center;
+  padding: 28px;
+}
+
+.academic-slide {
+  position: relative;
+  width: min(100%, 1280px);
+  aspect-ratio: var(--academic-aspect);
+  padding: var(--slide-pad-y) var(--slide-pad-x);
+  overflow: hidden;
+  background: var(--academic-bg);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.12);
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+h1,
+h2 {
+  letter-spacing: 0;
+}
+
+h1 {
+  max-width: 1080px;
+  font-size: clamp(36px, 5.1vw, 66px);
+  line-height: 1.12;
+  font-weight: 680;
+}
+
+h2 {
+  font-size: clamp(26px, 3.4vw, 42px);
+  line-height: 1.18;
+  font-weight: 650;
+}
+
+ul,
+ol {
+  margin: 0;
+  padding: 0;
+}
+
+li {
+  margin: 0;
+}
+
+figure {
+  margin: 0;
+}
+
+figcaption {
+  margin-top: 10px;
+  color: var(--academic-muted);
+  font-size: clamp(12px, 1.1vw, 15px);
+}
+
+.academic-citation {
+  position: absolute;
+  right: var(--slide-pad-x);
+  bottom: 26px;
+  max-width: 58%;
+  color: var(--academic-muted);
+  font-size: clamp(11px, 1vw, 14px);
+  text-align: right;
+}
+
+@media (max-width: 760px) {
+  .academic-deck {
+    padding: 0;
+    gap: 0;
+  }
+
+  .academic-slide {
+    width: 100vw;
+    min-height: 100svh;
+    aspect-ratio: auto;
+    box-shadow: none;
+  }
+}
+
+@media print {
+  html,
+  body {
+    background: #ffffff;
+  }
+
+  .academic-deck {
+    display: block;
+    padding: 0;
+  }
+
+  .academic-slide {
+    width: 100vw;
+    height: 100vh;
+    page-break-after: always;
+    break-after: page;
+    box-shadow: none;
+  }
+}
