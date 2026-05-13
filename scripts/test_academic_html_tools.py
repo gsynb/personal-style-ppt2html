@@ -14,6 +14,7 @@ from build_theme_css import css_from_profile
 from make_asset_manifest import build_asset_manifest
 from audit_html_layout import audit_html_file
 from pptx_to_academic_html import convert_pptx_to_html
+from mine_reusable_visuals import build_reusable_visual_registry
 
 
 PRESENTATION_XML = """\
@@ -114,6 +115,55 @@ LAYOUT_12_RELS_XML = """\
 </Relationships>
 """
 
+SLIDE_2_RELS_XML = """\
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout12.xml"/>
+</Relationships>
+"""
+
+LAYOUT_12_WITH_MASTER_RELS_XML = """\
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image1.png"/>
+  <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="../slideMasters/slideMaster1.xml"/>
+</Relationships>
+"""
+
+SLIDE_MASTER_1_XML = """\
+<p:sldMaster xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+             xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <p:cSld><p:spTree>
+    <p:sp>
+      <p:spPr>
+        <a:xfrm><a:off x="0" y="6200000"/><a:ext cx="12192000" cy="90000"/></a:xfrm>
+        <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
+        <a:solidFill><a:srgbClr val="0E419C"/></a:solidFill>
+      </p:spPr>
+    </p:sp>
+    <p:pic>
+      <p:spPr><a:xfrm><a:off x="106019" y="63907"/><a:ext cx="917438" cy="893906"/></a:xfrm></p:spPr>
+      <p:blipFill><a:blip r:embed="rId4"/></p:blipFill>
+    </p:pic>
+  </p:spTree></p:cSld>
+</p:sldMaster>
+"""
+
+SLIDE_MASTER_1_RELS_XML = """\
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image2.png"/>
+</Relationships>
+"""
+
+MANUAL_FOOTER_SHAPE_XML = """\
+    <p:sp>
+      <p:spPr>
+        <a:xfrm><a:off x="0" y="6700000"/><a:ext cx="12192000" cy="65000"/></a:xfrm>
+        <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
+        <a:solidFill><a:srgbClr val="788AC6"/></a:solidFill>
+      </p:spPr>
+    </p:sp>
+"""
+
 
 def write_minimal_pptx(path: Path) -> None:
     with zipfile.ZipFile(path, "w") as zf:
@@ -133,6 +183,26 @@ def write_layout_pptx(path: Path) -> None:
         zf.writestr("ppt/slideLayouts/slideLayout12.xml", LAYOUT_12_XML)
         zf.writestr("ppt/slideLayouts/_rels/slideLayout12.xml.rels", LAYOUT_12_RELS_XML)
         zf.writestr("ppt/media/image1.png", b"not-a-real-image")
+
+
+def add_manual_footer(xml: str) -> str:
+    return xml.replace("  </p:spTree></p:cSld>", MANUAL_FOOTER_SHAPE_XML + "  </p:spTree></p:cSld>")
+
+
+def write_master_and_repeat_pptx(path: Path) -> None:
+    with zipfile.ZipFile(path, "w") as zf:
+        zf.writestr("ppt/presentation.xml", PRESENTATION_XML)
+        zf.writestr("ppt/theme/theme1.xml", THEME_XML)
+        zf.writestr("ppt/slides/slide1.xml", add_manual_footer(SLIDE_1_XML))
+        zf.writestr("ppt/slides/slide2.xml", add_manual_footer(SLIDE_2_XML))
+        zf.writestr("ppt/slides/_rels/slide1.xml.rels", SLIDE_1_RELS_XML)
+        zf.writestr("ppt/slides/_rels/slide2.xml.rels", SLIDE_2_RELS_XML)
+        zf.writestr("ppt/slideLayouts/slideLayout12.xml", LAYOUT_12_XML)
+        zf.writestr("ppt/slideLayouts/_rels/slideLayout12.xml.rels", LAYOUT_12_WITH_MASTER_RELS_XML)
+        zf.writestr("ppt/slideMasters/slideMaster1.xml", SLIDE_MASTER_1_XML)
+        zf.writestr("ppt/slideMasters/_rels/slideMaster1.xml.rels", SLIDE_MASTER_1_RELS_XML)
+        zf.writestr("ppt/media/image1.png", b"layout-logo")
+        zf.writestr("ppt/media/image2.png", b"master-logo")
 
 
 class AcademicHtmlToolTests(unittest.TestCase):
@@ -237,6 +307,41 @@ class AcademicHtmlToolTests(unittest.TestCase):
             self.assertIn('src="assets/image1.png"', html_text)
             self.assertIn("linear-gradient", html_text + css_text)
             self.assertIn("pptx-layout", html_text)
+
+    def test_pptx_to_html_includes_slide_master_reusable_elements(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            pptx = tmp_path / "master.pptx"
+            out = tmp_path / "html"
+            write_master_and_repeat_pptx(pptx)
+
+            index = convert_pptx_to_html(pptx, out)
+            html_text = index.read_text(encoding="utf-8")
+
+        self.assertIn("pptx-master", html_text)
+        self.assertIn('src="assets/image2.png"', html_text)
+
+    def test_reusable_visual_registry_finds_master_layout_and_manual_repeats(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            pptx = Path(tmp) / "master.pptx"
+            write_master_and_repeat_pptx(pptx)
+
+            registry = build_reusable_visual_registry(pptx, min_occurrences=2)
+
+        elements = registry["reusable_elements"]
+        roles = {element["role"] for element in elements}
+        source_levels = {element["source_level"] for element in elements}
+        self.assertIn("institution_logo", roles)
+        self.assertIn("header_rule", roles)
+        self.assertIn("slide_master", source_levels)
+        self.assertTrue(
+            any(
+                element["reuse_level"] == "manual_repeat"
+                and element["role"] == "footer_rule"
+                and element["occurrence_count"] == 2
+                for element in elements
+            )
+        )
 
     def test_pptx_to_html_supports_motion_and_image_optimization(self):
         with tempfile.TemporaryDirectory() as tmp:

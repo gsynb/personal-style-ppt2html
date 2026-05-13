@@ -10,6 +10,8 @@
 
 - 把 `.pptx` 转成可翻页的 HTML slide preview。
 - 保留 PPTX 中可复用的 slide-layout 元素，例如单位 logo、顶部横条、底部规则线、页眉页脚视觉标识。
+- 保留 slide-master 元素，并检测那些没有放在 layout 里、但被手动复制到多页的重复视觉块。
+- 生成 `asset-registry.json`，记录可复用视觉候选项的语义角色、来源层级、覆盖页码、精确坐标和置信度。
 - 从历史 PPTX 中提取字体、主题色、页面比例、标题位置、citation footer、图片密度和常见页面布局。
 - 把 PPTX 内嵌媒体复制到本地 HTML assets。
 - 根据提取出的风格画像生成 CSS design tokens。
@@ -40,10 +42,11 @@
 - `ppt/slides/_rels/slideN.xml.rels`：每页的关系文件；
 - `ppt/slideLayouts/slideLayoutN.xml`：复用的 layout 元素；
 - `ppt/slideLayouts/_rels/slideLayoutN.xml.rels`：layout 层的 logo 和媒体资源；
+- `ppt/slideMasters/slideMasterN.xml`：master 层的复用标识和规则线；
 - `ppt/theme/theme1.xml`：主题色；
 - `ppt/media/*`：PPTX 内嵌图片。
 
-这一步很关键，因为 logo 和顶部横条经常不在每一页的 `slideN.xml` 里，而是在 `slideLayout` 里。现在转换器会顺着 slide 到 layout 的关系，把这些可复用元素一起插入 HTML。
+这一步很关键，因为 logo 和顶部横条经常不在每一页的 `slideN.xml` 里，而是在 `slideLayout` 或 `slideMaster` 里；还有一些重复视觉块是被手动复制到多页的。现在转换器会顺着 slide 到 layout 再到 master 的关系提取复用元素，视觉挖掘脚本也会聚类重复出现的 slide-local 元素。
 
 生成的 HTML 还可以带 `data-motion` 动效预设。动效只允许短促的透明度和轻微位移动画，并且包含 reduced-motion 和 print 降级规则，所以既适合学术汇报，也适合录屏展示。
 
@@ -61,12 +64,14 @@
 │   ├── animation-and-optimization.md
 │   ├── html-layout-patterns.md
 │   ├── imagegen-asset-guidelines.md
-│   └── institution-brand-rules.md
+│   ├── institution-brand-rules.md
+│   └── reusable-visual-mining.md
 └── scripts/
     ├── audit_html_layout.py
     ├── build_theme_css.py
     ├── extract_pptx_style.py
     ├── make_asset_manifest.py
+    ├── mine_reusable_visuals.py
     ├── pptx_to_academic_html.py
     └── test_academic_html_tools.py
 ```
@@ -78,6 +83,7 @@
 ```bash
 python scripts/extract_pptx_style.py your-deck.pptx -o work/style-profile.json
 python scripts/make_asset_manifest.py your-deck.pptx -o work/reference-assets
+python scripts/mine_reusable_visuals.py your-deck.pptx -o work/asset-registry.json
 python scripts/build_theme_css.py work/style-profile.json -o work/theme.generated.css
 python scripts/pptx_to_academic_html.py your-deck.pptx -o work/html-preview --profile work/style-profile.json --motion recording
 python scripts/audit_html_layout.py work/html-preview/index.html
@@ -96,6 +102,12 @@ work/html-preview/index.html
 使用 `--motion none` 可以得到最保守的学术输出。`--motion subtle` 适合现场浏览器汇报，`--motion recording` 适合录屏讲解，`--motion demo` 只建议用于更公开、更展示型的视频片段。
 
 动效系统会避免循环装饰动画，保持 slide-layout 中的 logo 和横条稳定，并且在 reduced-motion 用户设置和打印输出中自动禁用动画。
+
+## 可复用视觉 Registry
+
+当你想判断哪些元素能沉淀成个人风格系统时，运行 `mine_reusable_visuals.py`。它会识别 layout 和 master 继承的对象，也会识别那些位置、类型和视觉身份重复出现的 slide-local 元素。
+
+对于语义不确定的元素，可以把渲染截图和 `asset-registry.json` 一起交给视觉模型审阅。视觉模型应该负责标注和排除风险元素，而不是重新生成官方 logo、论文图、实验图表或事实性内容。
 
 ## 作为 Codex Skill 安装
 
@@ -126,13 +138,15 @@ python scripts/test_academic_html_tools.py
 - PPTX 媒体资产提取；
 - HTML 审计；
 - 带 slide-layout logo 和顶部横条的 PPTX 转 HTML；
+- slide-master 保留和可复用视觉 registry 挖掘；
 - 动效预设输出、图片优化属性和动画安全警告。
 
 ## 当前限制
 
 - `.emf` 和 `.wmf` 不是浏览器原生支持的图片格式。如果本机没有 LibreOffice、Inkscape、ImageMagick 等转换工具，这些资源会显示为占位。
 - 复杂 PowerPoint 几何形状会被近似处理。简单色块、横条、图片和文本框效果最好。
-- 当前重点处理 slide 和 slide-layout 内容。如果某些模板把可复用视觉元素只放在 slide-master 层，还可以继续扩展完整 master 继承。
+- 当前会跟随 slide-layout 和 slide-master 继承，处理常见图片、文本和形状，但复杂 PowerPoint 特效仍然是近似处理。
+- 可复用视觉 registry 基于 PPTX 结构和重复几何信息。遇到可能是事实图、论文图或实验图的重复对象时，建议再用 LLM vision 审阅。
 - 生成的 HTML 目标是忠实、可检查、可复用的预览和风格底座，不是像 PowerPoint 渲染器一样做到像素级完全一致。
 
 ## 隐私说明

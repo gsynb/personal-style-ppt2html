@@ -10,6 +10,8 @@ It is designed for people who already have a personal or institutional presentat
 
 - Convert a `.pptx` deck into a navigable HTML slide preview.
 - Preserve reusable slide-layout elements such as institution logos, header bars, footer rules, and recurring visual marks.
+- Preserve slide-master elements and detect manually repeated visual blocks that are not stored in layouts.
+- Build an `asset-registry.json` of reusable visual candidates with semantic roles, source levels, slide coverage, exact bounds, and confidence.
 - Extract typography, theme colors, slide size, title positions, citation-footers, image density, and common layout patterns from prior decks.
 - Copy embedded PPTX media into local HTML assets.
 - Generate CSS design tokens from the extracted style profile.
@@ -40,10 +42,11 @@ The converter reads:
 - `ppt/slides/_rels/slideN.xml.rels` for slide relationships,
 - `ppt/slideLayouts/slideLayoutN.xml` for reusable layout elements,
 - `ppt/slideLayouts/_rels/slideLayoutN.xml.rels` for layout-level logos and media,
+- `ppt/slideMasters/slideMasterN.xml` for master-level reusable marks and rules,
 - `ppt/theme/theme1.xml` for theme colors,
 - `ppt/media/*` for embedded images.
 
-This matters because logos and style bars are often not stored directly on each slide. They are usually stored in the slide layout. The converter follows the slide-to-layout relationship and inserts those reusable elements into the HTML output.
+This matters because logos and style bars are often not stored directly on each slide. They may be stored in the slide layout or slide master, while some repeated visual blocks are manually copied across slides. The converter follows slide-to-layout-to-master relationships, and the visual mining script also clusters repeated slide-local elements.
 
 The generated HTML can also carry a `data-motion` preset. Motion is intentionally limited to short opacity and transform entrances, with reduced-motion and print fallbacks, so the result works for both academic presenting and screen recording.
 
@@ -61,12 +64,14 @@ The generated HTML can also carry a `data-motion` preset. Motion is intentionall
 │   ├── animation-and-optimization.md
 │   ├── html-layout-patterns.md
 │   ├── imagegen-asset-guidelines.md
-│   └── institution-brand-rules.md
+│   ├── institution-brand-rules.md
+│   └── reusable-visual-mining.md
 └── scripts/
     ├── audit_html_layout.py
     ├── build_theme_css.py
     ├── extract_pptx_style.py
     ├── make_asset_manifest.py
+    ├── mine_reusable_visuals.py
     ├── pptx_to_academic_html.py
     └── test_academic_html_tools.py
 ```
@@ -78,6 +83,7 @@ Use Python 3. No required third-party package is needed for the core XML parsing
 ```bash
 python scripts/extract_pptx_style.py your-deck.pptx -o work/style-profile.json
 python scripts/make_asset_manifest.py your-deck.pptx -o work/reference-assets
+python scripts/mine_reusable_visuals.py your-deck.pptx -o work/asset-registry.json
 python scripts/build_theme_css.py work/style-profile.json -o work/theme.generated.css
 python scripts/pptx_to_academic_html.py your-deck.pptx -o work/html-preview --profile work/style-profile.json --motion recording
 python scripts/audit_html_layout.py work/html-preview/index.html
@@ -96,6 +102,12 @@ The generated deck supports keyboard navigation, reduced-motion preferences, and
 Use `--motion none` for the most conservative academic output. Use `--motion subtle` for live browser slides, `--motion recording` for screen-recorded walkthroughs, and `--motion demo` only when a more public demo style is appropriate.
 
 The motion system avoids looping decoration, keeps slide-layout logos and rules stable, and disables animation for reduced-motion users and print output.
+
+## Reusable Visual Registry
+
+Run `mine_reusable_visuals.py` when you want to understand what can become part of the user's reusable style system. It identifies inherited objects from slide layouts and slide masters, plus slide-local objects that repeat with the same geometry and visual identity.
+
+For ambiguous cases, use rendered slide screenshots and `asset-registry.json` together with a vision-capable model. Vision should label and flag candidates, not regenerate official logos, paper figures, plots, or factual content.
 
 ## Install as a Codex Skill
 
@@ -126,13 +138,15 @@ The tests cover:
 - media asset extraction,
 - HTML auditing,
 - PPTX-to-HTML conversion with slide-layout logo and header-bar preservation,
+- slide-master preservation and reusable visual registry mining,
 - motion preset output, optimized image attributes, and animation safety warnings.
 
 ## Current Limitations
 
 - `.emf` and `.wmf` media are not browser-native. Without a local converter such as LibreOffice, Inkscape, ImageMagick, or another vector conversion tool, these assets are represented as placeholders.
 - Complex PowerPoint geometry is approximated. Simple filled rectangles, bars, images, and text boxes work best.
-- The converter currently focuses on slide and slide-layout content. Full slide-master inheritance can be extended further if a deck stores reusable visual elements only in the master layer.
+- The converter now follows slide-layout and slide-master inheritance for common pictures, text, and shapes, but complex PowerPoint effects are still approximated.
+- The reusable visual registry uses PPTX structure and repeated geometry. LLM vision review is recommended when a repeated object may be a factual figure rather than a template asset.
 - HTML output is intended as a faithful, inspectable preview and reusable style base, not a pixel-perfect PowerPoint renderer.
 
 ## Privacy Note

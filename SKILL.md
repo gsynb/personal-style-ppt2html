@@ -15,6 +15,7 @@ Create restrained, institution-aware academic HTML presentations or research not
    ```bash
    python scripts/extract_pptx_style.py reference.pptx -o work/style-profile.json
    python scripts/make_asset_manifest.py reference.pptx -o work/reference-assets
+   python scripts/mine_reusable_visuals.py reference.pptx -o work/asset-registry.json
    python scripts/build_theme_css.py work/style-profile.json -o work/theme.generated.css
    ```
 
@@ -27,14 +28,16 @@ Create restrained, institution-aware academic HTML presentations or research not
    Use `--motion none` for the most conservative output.
 
 3. **Lock the design system.** Use `style-profile.json` for font, color, title alignment, citation placement, image density, common layout classes, and whether motion should be `none`, `subtle`, `recording`, or `demo`. Do not copy bad artifacts blindly; preserve the user's serious academic taste.
-4. **Build from the template.** Copy `assets/academic-html-template/`, replace placeholder content, and merge `theme.generated.css` into `theme.css` or load it after `theme.css`.
-5. **Use references only as needed.**
+4. **Mine reusable visuals.** Use `asset-registry.json` to distinguish inherited assets (`slide_master`, `slide_layout`) from manually repeated slide-local objects (`manual_repeat`). Treat the registry as evidence, not as an automatic permission to reuse factual figures.
+5. **Build from the template.** Copy `assets/academic-html-template/`, replace placeholder content, and merge `theme.generated.css` into `theme.css` or load it after `theme.css`.
+6. **Use references only as needed.**
    - `references/academic-style-rules.md`: tone, evidence discipline, visual restraint.
    - `references/html-layout-patterns.md`: slide/note patterns and responsive rules.
    - `references/institution-brand-rules.md`: school, lab, group, and logo handling.
    - `references/imagegen-asset-guidelines.md`: when generated raster assets are safe.
    - `references/animation-and-optimization.md`: restrained motion presets, video-ready output, image optimization, and animation audit rules.
-6. **Validate.** Run:
+   - `references/reusable-visual-mining.md`: asset registry semantics, manual-repeat detection, and optional vision review schema.
+7. **Validate.** Run:
 
    ```bash
    python scripts/audit_html_layout.py path/to/index.html
@@ -67,8 +70,13 @@ Treat the extracted profile as a starting point:
 - `slides[].title_candidate`: title position and alignment.
 - `slides[].layout_class`: reusable rhythm such as `figure-explanation-slide`, `diagram-or-flow`, or `centered-title-with-footer-citation`.
 - `style_summary`: evidence of image-heavy slides, bilingual slides, and citation-footer habits.
+- `asset-registry.json`: reusable visual candidates, source levels, semantic roles, confidence, slide coverage, and exact bounds.
 
 If the profile conflicts with the user's stated target, follow the user's target and document the intentional deviation.
+
+## Vision Review Boundary
+
+Use vision-capable review only after structural mining when visual semantics are ambiguous. The model can confirm roles, identify missed motifs, and flag paper figures that should not become template assets. It must not invent or regenerate official marks, logos, paper figures, plots, or factual content.
 
 ## Output Expectations
 

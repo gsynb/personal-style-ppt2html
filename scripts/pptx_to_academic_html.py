@@ -357,6 +357,39 @@ def _convert_layout(
     )
 
 
+def _slide_master_path(zf: zipfile.ZipFile, layout_path: str | None) -> str | None:
+    if not layout_path:
+        return None
+    for rel in _relationships(zf, layout_path).values():
+        if rel.get("type", "").endswith("/slideMaster"):
+            return rel.get("target")
+    return None
+
+
+def _convert_master(
+    zf: zipfile.ZipFile,
+    master_path: str | None,
+    theme: dict[str, str],
+    default_font: str,
+    asset_dir_name: str,
+) -> str:
+    if not master_path:
+        return ""
+    root = _read_xml(zf, master_path)
+    if root is None:
+        return ""
+    return _convert_tree_elements(
+        zf,
+        root,
+        _relationships(zf, master_path),
+        theme,
+        default_font,
+        asset_dir_name,
+        layer_class="pptx-layout pptx-master",
+        skip_placeholders=True,
+    )
+
+
 def _convert_slide(
     zf: zipfile.ZipFile,
     slide_path: str,
@@ -368,7 +401,15 @@ def _convert_slide(
     root = _read_xml(zf, slide_path)
     if root is None:
         return ""
-    layout_elements = _convert_layout(zf, _slide_layout_path(zf, slide_path), theme, default_font, asset_dir_name)
+    layout_path = _slide_layout_path(zf, slide_path)
+    master_elements = _convert_master(
+        zf,
+        _slide_master_path(zf, layout_path),
+        theme,
+        default_font,
+        asset_dir_name,
+    )
+    layout_elements = _convert_layout(zf, layout_path, theme, default_font, asset_dir_name)
     slide_elements = _convert_tree_elements(
         zf,
         root,
@@ -377,7 +418,7 @@ def _convert_slide(
         default_font,
         asset_dir_name,
     )
-    combined = "\n".join(element for element in [layout_elements, slide_elements] if element)
+    combined = "\n".join(element for element in [master_elements, layout_elements, slide_elements] if element)
 
     return (
         f'<section class="academic-slide pptx-slide" data-slide="{number}">\n'
