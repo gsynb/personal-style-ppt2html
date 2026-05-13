@@ -1,6 +1,6 @@
 ---
 name: personal-style-ppt2html
-description: Use when converting PPTX decks into serious academic HTML presentations or reusable personal-style templates, especially when prior decks contain slide-layout logos, institution marks, header rules, scientific figures, citations, equations, or research-note material.
+description: Use when converting PPTX decks into serious academic HTML presentations, video-ready slide previews, or reusable personal-style templates, especially when prior decks contain slide-layout logos, institution marks, header rules, scientific figures, citations, equations, or research-note material.
 ---
 
 # Personal Style PPT2HTML
@@ -9,7 +9,7 @@ Create restrained, institution-aware academic HTML presentations or research not
 
 ## Workflow
 
-1. **Collect sources.** Identify reference PPTX files, research notes, figures, citations, unit/lab assets, and the requested output mode: `slides` or `notes`.
+1. **Collect sources.** Identify reference PPTX files, research notes, figures, citations, unit/lab assets, and the requested output mode: `slides`, `notes`, or `recording`.
 2. **Extract style.** When a PPTX reference exists, run:
 
    ```bash
@@ -21,16 +21,19 @@ Create restrained, institution-aware academic HTML presentations or research not
    For a direct PPTX-to-HTML preview that preserves reusable slide-layout elements such as logos, rules, and recurring header bars, run:
 
    ```bash
-   python scripts/pptx_to_academic_html.py reference.pptx -o work/html-preview --profile work/style-profile.json
+   python scripts/pptx_to_academic_html.py reference.pptx -o work/html-preview --profile work/style-profile.json --motion recording
    ```
 
-3. **Lock the design system.** Use `style-profile.json` for font, color, title alignment, citation placement, image density, and common layout classes. Do not copy bad artifacts blindly; preserve the user's serious academic taste.
+   Use `--motion none` for the most conservative output.
+
+3. **Lock the design system.** Use `style-profile.json` for font, color, title alignment, citation placement, image density, common layout classes, and whether motion should be `none`, `subtle`, `recording`, or `demo`. Do not copy bad artifacts blindly; preserve the user's serious academic taste.
 4. **Build from the template.** Copy `assets/academic-html-template/`, replace placeholder content, and merge `theme.generated.css` into `theme.css` or load it after `theme.css`.
 5. **Use references only as needed.**
    - `references/academic-style-rules.md`: tone, evidence discipline, visual restraint.
    - `references/html-layout-patterns.md`: slide/note patterns and responsive rules.
    - `references/institution-brand-rules.md`: school, lab, group, and logo handling.
    - `references/imagegen-asset-guidelines.md`: when generated raster assets are safe.
+   - `references/animation-and-optimization.md`: restrained motion presets, video-ready output, image optimization, and animation audit rules.
 6. **Validate.** Run:
 
    ```bash
@@ -47,6 +50,13 @@ Create restrained, institution-aware academic HTML presentations or research not
 - Use editable HTML, SVG, Mermaid, MathJax, or chart libraries for factual diagrams and data.
 - Use image generation only for non-factual reusable assets such as restrained cover backgrounds, subtle lattice/network motifs, or chapter dividers.
 - Never generate or guess institution logos, published paper figures, experimental data, or official brand marks.
+
+## Motion and Optimization Rules
+
+- Default to `none` for formal or PDF-first academic outputs; use `subtle` for live slides and `recording` for screen-recorded walkthroughs.
+- Keep animation to short opacity and small transform entrances. Do not animate data, equations, official logos, header bars, or footer rules in a distracting way.
+- Every animated output must include a `prefers-reduced-motion` guard and print rules that disable motion.
+- Preserve local assets and use optimized image attributes such as `loading="lazy"` and `decoding="async"` for PPTX-derived images.
 
 ## PPTX Profile Signals
 

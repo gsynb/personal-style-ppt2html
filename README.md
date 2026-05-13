@@ -13,8 +13,10 @@ It is designed for people who already have a personal or institutional presentat
 - Extract typography, theme colors, slide size, title positions, citation-footers, image density, and common layout patterns from prior decks.
 - Copy embedded PPTX media into local HTML assets.
 - Generate CSS design tokens from the extracted style profile.
+- Add restrained motion presets for live talks, screen recording, and demo videos.
+- Optimize generated HTML with local assets, lazy image loading, async image decoding, reduced-motion support, and print-safe CSS.
 - Provide a restrained academic HTML template for talks, group meetings, paper reading reports, thesis defenses, and research notes.
-- Audit generated HTML for basic structure, print support, and slide container correctness.
+- Audit generated HTML for basic structure, print support, motion safety, and slide container correctness.
 
 ## Why This Exists
 
@@ -43,6 +45,8 @@ The converter reads:
 
 This matters because logos and style bars are often not stored directly on each slide. They are usually stored in the slide layout. The converter follows the slide-to-layout relationship and inserts those reusable elements into the HTML output.
 
+The generated HTML can also carry a `data-motion` preset. Motion is intentionally limited to short opacity and transform entrances, with reduced-motion and print fallbacks, so the result works for both academic presenting and screen recording.
+
 ## Repository Structure
 
 ```text
@@ -54,6 +58,7 @@ This matters because logos and style bars are often not stored directly on each 
 │   └── academic-html-template/
 ├── references/
 │   ├── academic-style-rules.md
+│   ├── animation-and-optimization.md
 │   ├── html-layout-patterns.md
 │   ├── imagegen-asset-guidelines.md
 │   └── institution-brand-rules.md
@@ -74,7 +79,7 @@ Use Python 3. No required third-party package is needed for the core XML parsing
 python scripts/extract_pptx_style.py your-deck.pptx -o work/style-profile.json
 python scripts/make_asset_manifest.py your-deck.pptx -o work/reference-assets
 python scripts/build_theme_css.py work/style-profile.json -o work/theme.generated.css
-python scripts/pptx_to_academic_html.py your-deck.pptx -o work/html-preview --profile work/style-profile.json
+python scripts/pptx_to_academic_html.py your-deck.pptx -o work/html-preview --profile work/style-profile.json --motion recording
 python scripts/audit_html_layout.py work/html-preview/index.html
 ```
 
@@ -84,7 +89,13 @@ Then open:
 work/html-preview/index.html
 ```
 
-The generated deck supports keyboard navigation and print/PDF export.
+The generated deck supports keyboard navigation, reduced-motion preferences, and print/PDF export.
+
+## Motion Presets
+
+Use `--motion none` for the most conservative academic output. Use `--motion subtle` for live browser slides, `--motion recording` for screen-recorded walkthroughs, and `--motion demo` only when a more public demo style is appropriate.
+
+The motion system avoids looping decoration, keeps slide-layout logos and rules stable, and disables animation for reduced-motion users and print output.
 
 ## Install as a Codex Skill
 
@@ -114,7 +125,8 @@ The tests cover:
 - CSS token generation,
 - media asset extraction,
 - HTML auditing,
-- PPTX-to-HTML conversion with slide-layout logo and header-bar preservation.
+- PPTX-to-HTML conversion with slide-layout logo and header-bar preservation,
+- motion preset output, optimized image attributes, and animation safety warnings.
 
 ## Current Limitations
 

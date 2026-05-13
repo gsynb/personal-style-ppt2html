@@ -13,8 +13,10 @@
 - 从历史 PPTX 中提取字体、主题色、页面比例、标题位置、citation footer、图片密度和常见页面布局。
 - 把 PPTX 内嵌媒体复制到本地 HTML assets。
 - 根据提取出的风格画像生成 CSS design tokens。
+- 增加克制的动效预设，适合现场汇报、录屏讲解和 demo 视频。
+- 对生成 HTML 做输出优化，包括本地资源、图片 lazy loading、异步解码、reduced-motion 支持和 print-safe CSS。
 - 提供严肃学术场景的 HTML 模板，适合组会、seminar、paper reading、答辩和科研记录。
-- 对生成的 HTML 做基础结构审计，检查 viewport、print CSS、slide 容器等。
+- 对生成的 HTML 做基础结构和动效安全审计，检查 viewport、print CSS、slide 容器、动效降级等。
 
 ## 为什么需要它
 
@@ -43,6 +45,8 @@
 
 这一步很关键，因为 logo 和顶部横条经常不在每一页的 `slideN.xml` 里，而是在 `slideLayout` 里。现在转换器会顺着 slide 到 layout 的关系，把这些可复用元素一起插入 HTML。
 
+生成的 HTML 还可以带 `data-motion` 动效预设。动效只允许短促的透明度和轻微位移动画，并且包含 reduced-motion 和 print 降级规则，所以既适合学术汇报，也适合录屏展示。
+
 ## 仓库结构
 
 ```text
@@ -54,6 +58,7 @@
 │   └── academic-html-template/
 ├── references/
 │   ├── academic-style-rules.md
+│   ├── animation-and-optimization.md
 │   ├── html-layout-patterns.md
 │   ├── imagegen-asset-guidelines.md
 │   └── institution-brand-rules.md
@@ -74,7 +79,7 @@
 python scripts/extract_pptx_style.py your-deck.pptx -o work/style-profile.json
 python scripts/make_asset_manifest.py your-deck.pptx -o work/reference-assets
 python scripts/build_theme_css.py work/style-profile.json -o work/theme.generated.css
-python scripts/pptx_to_academic_html.py your-deck.pptx -o work/html-preview --profile work/style-profile.json
+python scripts/pptx_to_academic_html.py your-deck.pptx -o work/html-preview --profile work/style-profile.json --motion recording
 python scripts/audit_html_layout.py work/html-preview/index.html
 ```
 
@@ -84,7 +89,13 @@ python scripts/audit_html_layout.py work/html-preview/index.html
 work/html-preview/index.html
 ```
 
-生成的 HTML 支持键盘翻页，也支持打印或导出 PDF。
+生成的 HTML 支持键盘翻页、reduced-motion 偏好，也支持打印或导出 PDF。
+
+## 动效预设
+
+使用 `--motion none` 可以得到最保守的学术输出。`--motion subtle` 适合现场浏览器汇报，`--motion recording` 适合录屏讲解，`--motion demo` 只建议用于更公开、更展示型的视频片段。
+
+动效系统会避免循环装饰动画，保持 slide-layout 中的 logo 和横条稳定，并且在 reduced-motion 用户设置和打印输出中自动禁用动画。
 
 ## 作为 Codex Skill 安装
 
@@ -114,7 +125,8 @@ python scripts/test_academic_html_tools.py
 - CSS token 生成；
 - PPTX 媒体资产提取；
 - HTML 审计；
-- 带 slide-layout logo 和顶部横条的 PPTX 转 HTML。
+- 带 slide-layout logo 和顶部横条的 PPTX 转 HTML；
+- 动效预设输出、图片优化属性和动画安全警告。
 
 ## 当前限制
 

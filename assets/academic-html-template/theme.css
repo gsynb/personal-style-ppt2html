@@ -31,6 +31,12 @@ body {
   line-height: 1.45;
 }
 
+img {
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
 .academic-deck {
   display: grid;
   gap: 28px;
@@ -103,6 +109,69 @@ figcaption {
   text-align: right;
 }
 
+.academic-deck[data-motion="subtle"] .academic-slide:not([hidden]) > :not(.unit-lockup):not(.slide-footer):not(.academic-citation),
+.academic-deck[data-motion="recording"] .academic-slide:not([hidden]) > :not(.unit-lockup):not(.slide-footer):not(.academic-citation),
+.academic-deck[data-motion="demo"] .academic-slide:not([hidden]) > :not(.unit-lockup):not(.slide-footer):not(.academic-citation) {
+  will-change: opacity, transform;
+}
+
+.academic-deck[data-motion="subtle"] .academic-slide:not([hidden]) > :not(.unit-lockup):not(.slide-footer):not(.academic-citation) {
+  animation: academic-enter-subtle 260ms ease-out both;
+}
+
+.academic-deck[data-motion="recording"] .academic-slide:not([hidden]) > :not(.unit-lockup):not(.slide-footer):not(.academic-citation) {
+  animation: academic-enter-recording 420ms ease-out both;
+}
+
+.academic-deck[data-motion="demo"] .academic-slide:not([hidden]) > :not(.unit-lockup):not(.slide-footer):not(.academic-citation) {
+  animation: academic-enter-demo 520ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.academic-deck[data-motion="subtle"] .academic-slide:not([hidden]) > :not(.unit-lockup):not(.slide-footer):not(.academic-citation):nth-child(2),
+.academic-deck[data-motion="recording"] .academic-slide:not([hidden]) > :not(.unit-lockup):not(.slide-footer):not(.academic-citation):nth-child(2),
+.academic-deck[data-motion="demo"] .academic-slide:not([hidden]) > :not(.unit-lockup):not(.slide-footer):not(.academic-citation):nth-child(2) {
+  animation-delay: 70ms;
+}
+
+.academic-deck[data-motion="subtle"] .academic-slide:not([hidden]) > :not(.unit-lockup):not(.slide-footer):not(.academic-citation):nth-child(3),
+.academic-deck[data-motion="recording"] .academic-slide:not([hidden]) > :not(.unit-lockup):not(.slide-footer):not(.academic-citation):nth-child(3),
+.academic-deck[data-motion="demo"] .academic-slide:not([hidden]) > :not(.unit-lockup):not(.slide-footer):not(.academic-citation):nth-child(3) {
+  animation-delay: 120ms;
+}
+
+@keyframes academic-enter-subtle {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes academic-enter-recording {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes academic-enter-demo {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.995);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 @media (max-width: 760px) {
   .academic-deck {
     padding: 0;
@@ -114,6 +183,21 @@ figcaption {
     min-height: 100svh;
     aspect-ratio: auto;
     box-shadow: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+
+  .academic-deck .academic-slide * {
+    opacity: 1 !important;
+    transform: none !important;
   }
 }
 
@@ -134,5 +218,10 @@ figcaption {
     page-break-after: always;
     break-after: page;
     box-shadow: none;
+  }
+
+  .academic-slide * {
+    animation: none !important;
+    transition: none !important;
   }
 }

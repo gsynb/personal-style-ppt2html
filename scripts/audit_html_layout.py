@@ -56,6 +56,17 @@ def audit_html_file(path: str | Path) -> dict[str, Any]:
     inherited_pptx_visuals = "pptx-slide" in text or "pptx-layout" in text
     if re.search(r"linear-gradient|radial-gradient|blur\(", combined_text, re.I) and not inherited_pptx_visuals:
         warnings.append("Decorative gradients or blur detected; keep academic templates restrained.")
+    has_motion_css = bool(re.search(r"\b(animation|transition)\s*:", combined_text, re.I))
+    has_reduced_motion_guard = bool(re.search(r"prefers-reduced-motion\s*:\s*reduce", combined_text, re.I))
+    if has_motion_css and not has_reduced_motion_guard:
+        warnings.append("Animation CSS is missing a prefers-reduced-motion guard.")
+    if re.search(r"\banimation(?:-[^:]+)?\s*:[^;{}]*\binfinite\b", combined_text, re.I):
+        warnings.append("Infinite animation detected; avoid looping motion in academic slides.")
+    motion_values = re.findall(r"data-motion=[\"']([^\"']+)[\"']", text, re.I)
+    allowed_motion = {"none", "subtle", "recording", "demo"}
+    for value in motion_values:
+        if value not in allowed_motion:
+            warnings.append(f"Unknown data-motion preset: {value}.")
     if len(re.findall(r"class=[\"'][^\"']*card", text, re.I)) > 8:
         warnings.append("Many card-like components detected; academic slides should prioritize figures and claims.")
 

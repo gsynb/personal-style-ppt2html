@@ -238,6 +238,44 @@ class AcademicHtmlToolTests(unittest.TestCase):
             self.assertIn("linear-gradient", html_text + css_text)
             self.assertIn("pptx-layout", html_text)
 
+    def test_pptx_to_html_supports_motion_and_image_optimization(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            pptx = tmp_path / "layout.pptx"
+            out = tmp_path / "html"
+            write_layout_pptx(pptx)
+
+            index = convert_pptx_to_html(pptx, out, motion="recording")
+            html_text = index.read_text(encoding="utf-8")
+            css_text = (out / "style.css").read_text(encoding="utf-8")
+
+            self.assertIn('data-motion="recording"', html_text)
+            self.assertIn('loading="lazy"', html_text)
+            self.assertIn('decoding="async"', html_text)
+            self.assertIn("@media (prefers-reduced-motion: reduce)", css_text)
+            self.assertIn("pptx-enter-recording", css_text)
+
+    def test_audit_warns_when_animation_lacks_reduced_motion_guard(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            html = Path(tmp) / "index.html"
+            html.write_text(
+                """<!doctype html>
+<html><head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+@media print { .academic-slide { break-after: page; } }
+.academic-slide { animation: fadeIn 300ms ease both; }
+</style>
+</head><body><main class="academic-deck"><section class="academic-slide"></section></main></body></html>
+""",
+                encoding="utf-8",
+            )
+
+            report = audit_html_file(html)
+
+        self.assertEqual(report["errors"], [])
+        self.assertIn("Animation CSS is missing a prefers-reduced-motion guard.", report["warnings"])
+
 
 if __name__ == "__main__":
     unittest.main()

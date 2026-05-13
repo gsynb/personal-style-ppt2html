@@ -2,6 +2,10 @@ const deck = document.querySelector("#deck");
 const slides = Array.from(document.querySelectorAll(".academic-slide"));
 let current = 0;
 
+if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  deck?.setAttribute("data-motion", "none");
+}
+
 function showSlide(index) {
   current = Math.max(0, Math.min(slides.length - 1, index));
   slides.forEach((slide, slideIndex) => {

@@ -23,6 +23,8 @@ NS = {
     "r": "http://schemas.openxmlformats.org/officeDocument/2006/relationships",
 }
 
+ALLOWED_MOTION = {"none", "subtle", "recording", "demo"}
+
 
 def _emu_to_px(value: str | int | None) -> float:
     try:
@@ -237,6 +239,13 @@ def _extract_assets(zf: zipfile.ZipFile, output_assets: Path) -> None:
             (output_assets / Path(name).name).write_bytes(zf.read(name))
 
 
+def _normalize_motion(motion: str) -> str:
+    if motion not in ALLOWED_MOTION:
+        allowed = ", ".join(sorted(ALLOWED_MOTION))
+        raise ValueError(f"Unsupported motion preset '{motion}'. Use one of: {allowed}.")
+    return motion
+
+
 def _is_placeholder(shape: ET.Element) -> bool:
     return shape.find(".//p:ph", NS) is not None
 
@@ -276,7 +285,7 @@ def _convert_tree_elements(
             if extension in {".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"}:
                 elements.append(
                     f'<img class="{classes}" src="{asset_dir_name}/{html.escape(filename)}" '
-                    f'style="{_css_box(bounds)}" alt="">'
+                    f'style="{_css_box(bounds)}" alt="" loading="lazy" decoding="async">'
                 )
             else:
                 classes = f"pptx-emf {layer_class}".strip()
@@ -378,11 +387,17 @@ def _convert_slide(
     )
 
 
-def convert_pptx_to_html(pptx: str | Path, output_dir: str | Path, profile: str | Path | None = None) -> Path:
+def convert_pptx_to_html(
+    pptx: str | Path,
+    output_dir: str | Path,
+    profile: str | Path | None = None,
+    motion: str = "none",
+) -> Path:
     pptx_path = Path(pptx).expanduser().resolve()
     out = Path(output_dir).expanduser().resolve()
     asset_dir = out / "assets"
     out.mkdir(parents=True, exist_ok=True)
+    motion = _normalize_motion(motion)
 
     profile_data: dict[str, Any] = {}
     if profile:
@@ -464,6 +479,44 @@ body {{
   font-size: 12px;
   text-align: center;
 }}
+.academic-deck[data-motion="subtle"] .academic-slide:not([hidden]) .pptx-text:not(.pptx-layout),
+.academic-deck[data-motion="subtle"] .academic-slide:not([hidden]) .pptx-img:not(.pptx-layout),
+.academic-deck[data-motion="subtle"] .academic-slide:not([hidden]) .pptx-shape:not(.pptx-layout),
+.academic-deck[data-motion="recording"] .academic-slide:not([hidden]) .pptx-text:not(.pptx-layout),
+.academic-deck[data-motion="recording"] .academic-slide:not([hidden]) .pptx-img:not(.pptx-layout),
+.academic-deck[data-motion="recording"] .academic-slide:not([hidden]) .pptx-shape:not(.pptx-layout),
+.academic-deck[data-motion="demo"] .academic-slide:not([hidden]) .pptx-text:not(.pptx-layout),
+.academic-deck[data-motion="demo"] .academic-slide:not([hidden]) .pptx-img:not(.pptx-layout),
+.academic-deck[data-motion="demo"] .academic-slide:not([hidden]) .pptx-shape:not(.pptx-layout) {{
+  will-change: opacity, transform;
+}}
+.academic-deck[data-motion="subtle"] .academic-slide:not([hidden]) .pptx-text:not(.pptx-layout),
+.academic-deck[data-motion="subtle"] .academic-slide:not([hidden]) .pptx-img:not(.pptx-layout),
+.academic-deck[data-motion="subtle"] .academic-slide:not([hidden]) .pptx-shape:not(.pptx-layout) {{
+  animation: pptx-enter-subtle 260ms ease-out both;
+}}
+.academic-deck[data-motion="recording"] .academic-slide:not([hidden]) .pptx-text:not(.pptx-layout),
+.academic-deck[data-motion="recording"] .academic-slide:not([hidden]) .pptx-img:not(.pptx-layout),
+.academic-deck[data-motion="recording"] .academic-slide:not([hidden]) .pptx-shape:not(.pptx-layout) {{
+  animation: pptx-enter-recording 420ms ease-out both;
+}}
+.academic-deck[data-motion="demo"] .academic-slide:not([hidden]) .pptx-text:not(.pptx-layout),
+.academic-deck[data-motion="demo"] .academic-slide:not([hidden]) .pptx-img:not(.pptx-layout),
+.academic-deck[data-motion="demo"] .academic-slide:not([hidden]) .pptx-shape:not(.pptx-layout) {{
+  animation: pptx-enter-demo 520ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}}
+@keyframes pptx-enter-subtle {{
+  from {{ opacity: 0; transform: translateY(4px); }}
+  to {{ opacity: 1; transform: translateY(0); }}
+}}
+@keyframes pptx-enter-recording {{
+  from {{ opacity: 0; transform: translateY(6px); }}
+  to {{ opacity: 1; transform: translateY(0); }}
+}}
+@keyframes pptx-enter-demo {{
+  from {{ opacity: 0; transform: translateY(10px) scale(0.995); }}
+  to {{ opacity: 1; transform: translateY(0) scale(1); }}
+}}
 .slide-number {{
   position: absolute;
   right: 18px;
@@ -493,6 +546,19 @@ body {{
   padding: 4px 10px;
   font: inherit;
 }}
+@media (prefers-reduced-motion: reduce) {{
+  *,
+  *::before,
+  *::after {{
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }}
+  .academic-deck .academic-slide * {{
+    opacity: 1 !important;
+    transform: none !important;
+  }}
+}}
 @media print {{
   body {{ background: #fff; }}
   .deck-shell {{ display: block; padding: 0; }}
@@ -503,12 +569,20 @@ body {{
     break-after: page;
     box-shadow: none;
   }}
+  .academic-slide * {{
+    animation: none !important;
+    transition: none !important;
+  }}
   .controls {{ display: none; }}
 }}
 """
     js = """\
+const deck = document.querySelector('.academic-deck');
 const slides = Array.from(document.querySelectorAll('.academic-slide'));
 let current = 0;
+if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  deck?.setAttribute('data-motion', 'none');
+}
 function show(index) {
   current = Math.max(0, Math.min(slides.length - 1, index));
   slides.forEach((slide, i) => slide.hidden = i !== current);
@@ -542,7 +616,7 @@ showFromHash();
     <link rel="stylesheet" href="./style.css">
   </head>
   <body>
-    <main class="academic-deck deck-shell" aria-label="{title}">
+    <main class="academic-deck deck-shell" data-motion="{html.escape(motion)}" aria-label="{title}">
       {''.join(slides)}
     </main>
     <nav class="controls" aria-label="slide controls">
@@ -565,8 +639,14 @@ def main() -> int:
     parser.add_argument("pptx", type=Path)
     parser.add_argument("-o", "--output-dir", type=Path, required=True)
     parser.add_argument("--profile", type=Path)
+    parser.add_argument(
+        "--motion",
+        choices=sorted(ALLOWED_MOTION),
+        default="none",
+        help="Motion preset for browser presentation or recording output.",
+    )
     args = parser.parse_args()
-    index = convert_pptx_to_html(args.pptx, args.output_dir, args.profile)
+    index = convert_pptx_to_html(args.pptx, args.output_dir, args.profile, motion=args.motion)
     print(index)
     return 0
 
