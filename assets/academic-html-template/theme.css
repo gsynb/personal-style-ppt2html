@@ -105,7 +105,7 @@ figcaption {
   bottom: 26px;
   max-width: 58%;
   color: var(--academic-muted);
-  font-size: clamp(11px, 1vw, 14px);
+  font-size: clamp(12px, 1vw, 14px);
   text-align: right;
 }
 

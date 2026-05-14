@@ -72,13 +72,23 @@
     ├── extract_pptx_style.py
     ├── make_asset_manifest.py
     ├── mine_reusable_visuals.py
+    ├── pptx_common.py
     ├── pptx_to_academic_html.py
+    ├── run_pipeline.py
     └── test_academic_html_tools.py
 ```
 
 ## 快速开始
 
 使用 Python 3。核心 XML 解析路径不依赖第三方包。
+
+完整流程可以直接运行：
+
+```bash
+python scripts/run_pipeline.py your-deck.pptx -o work/pipeline --motion recording
+```
+
+如果需要手动控制每一步：
 
 ```bash
 python scripts/extract_pptx_style.py your-deck.pptx -o work/style-profile.json
@@ -96,6 +106,8 @@ work/html-preview/index.html
 ```
 
 生成的 HTML 支持键盘翻页、reduced-motion 偏好，也支持打印或导出 PDF。
+
+如果把 `theme.generated.css` 用在可复用模板里，应放在 `theme.css` 和 `components.css` 之后引入，这样提取出来的 token 才会覆盖基础默认值。
 
 ## 动效预设
 
@@ -139,6 +151,7 @@ python scripts/test_academic_html_tools.py
 - HTML 审计；
 - 带 slide-layout logo 和顶部横条的 PPTX 转 HTML；
 - slide-master 保留和可复用视觉 registry 挖掘；
+- master/layout 重复元素过滤和母版占位文本清理；
 - 动效预设输出、图片优化属性和动画安全警告。
 
 ## 当前限制

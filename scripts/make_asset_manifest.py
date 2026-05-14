@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import zipfile
 from pathlib import Path
@@ -26,17 +27,25 @@ def build_asset_manifest(pptx: str | Path, asset_dir: str | Path) -> dict[str, A
     output_dir.mkdir(parents=True, exist_ok=True)
 
     assets: list[dict[str, Any]] = []
+    first_seen_by_hash: dict[str, str] = {}
     with zipfile.ZipFile(pptx_path) as zf:
-        media_names = sorted(name for name in zf.namelist() if name.startswith("ppt/media/"))
+        media_names = sorted(name for name in zf.namelist() if name.startswith("ppt/media/") and not name.endswith("/"))
         for name in media_names:
+            data = zf.read(name)
+            sha1 = hashlib.sha1(data).hexdigest()
             target = output_dir / Path(name).name
-            target.write_bytes(zf.read(name))
+            target.write_bytes(data)
             item: dict[str, Any] = {
                 "file": target.name,
                 "source_path": name,
                 "extension": target.suffix.lower().lstrip("."),
                 "bytes": target.stat().st_size,
+                "sha1": sha1,
             }
+            if sha1 in first_seen_by_hash:
+                item["duplicate_of"] = first_seen_by_hash[sha1]
+            else:
+                first_seen_by_hash[sha1] = target.name
             size = _image_size(target)
             if size:
                 item.update(size)

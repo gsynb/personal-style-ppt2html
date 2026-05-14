@@ -12,6 +12,8 @@ from pathlib import Path
 from typing import Any
 from xml.etree import ElementTree as ET
 
+from pptx_common import is_citation as _shared_is_citation
+
 EMU_PER_INCH = 914400
 
 NS = {
@@ -137,11 +139,7 @@ def _shape_fill(shape: ET.Element) -> str | None:
 
 
 def _is_citation(text: str) -> bool:
-    return bool(
-        re.search(r"\b(et al\.?|arXiv|doi|DOI|Nature|Science|Advances|Proceedings)\b", text)
-        or re.search(r"\b(19|20)\d{2}\b", text)
-        or "[J]" in text
-    )
+    return _shared_is_citation(text)
 
 
 def _choose_title(text_boxes: list[dict[str, Any]], canvas: dict[str, Any]) -> dict[str, Any] | None:

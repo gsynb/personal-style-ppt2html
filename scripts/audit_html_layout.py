@@ -67,6 +67,16 @@ def audit_html_file(path: str | Path) -> dict[str, Any]:
     for value in motion_values:
         if value not in allowed_motion:
             warnings.append(f"Unknown data-motion preset: {value}.")
+    for img_tag in re.findall(r"<img\b[^>]*>", text, re.I):
+        if not re.search(r"\salt\s*=", img_tag, re.I):
+            warnings.append("Image tag is missing an alt attribute.")
+            break
+    tiny_font_sizes = [
+        float(value)
+        for value in re.findall(r"font-size\s*:\s*([0-9]+(?:\.[0-9]+)?)px", combined_text, re.I)
+    ]
+    if any(value < 12 for value in tiny_font_sizes):
+        warnings.append("Tiny font-size detected below 12px.")
     if len(re.findall(r"class=[\"'][^\"']*card", text, re.I)) > 8:
         warnings.append("Many card-like components detected; academic slides should prioritize figures and claims.")
 

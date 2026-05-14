@@ -4,155 +4,32 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
-import posixpath
 import re
 import zipfile
 from collections import defaultdict
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 from typing import Any
 from xml.etree import ElementTree as ET
 
-EMU_PER_INCH = 914400
-PX_PER_INCH = 96
-
-NS = {
-    "a": "http://schemas.openxmlformats.org/drawingml/2006/main",
-    "p": "http://schemas.openxmlformats.org/presentationml/2006/main",
-    "r": "http://schemas.openxmlformats.org/officeDocument/2006/relationships",
-}
-
-
-def _slide_number(path: str) -> int:
-    match = re.search(r"slide(\d+)\.xml$", path)
-    return int(match.group(1)) if match else 0
-
-
-def _read_xml(zf: zipfile.ZipFile, name: str) -> ET.Element | None:
-    if name not in zf.namelist():
-        return None
-    try:
-        return ET.fromstring(zf.read(name))
-    except ET.ParseError:
-        return None
-
-
-def _emu_to_px(value: str | int | None) -> float:
-    try:
-        return int(value or 0) / EMU_PER_INCH * PX_PER_INCH
-    except ValueError:
-        return 0.0
-
-
-def _hex(value: str | None) -> str | None:
-    if not value:
-        return None
-    value = value.strip().lstrip("#").upper()
-    if re.fullmatch(r"[0-9A-F]{6}", value):
-        return f"#{value}"
-    return None
-
-
-def _relationship_path(part_path: str) -> str:
-    part = PurePosixPath(part_path)
-    return str(part.parent / "_rels" / f"{part.name}.rels")
-
-
-def _resolve_target(part_path: str, target: str) -> str:
-    if target.startswith("/"):
-        return posixpath.normpath(target.lstrip("/"))
-    return posixpath.normpath(posixpath.join(str(PurePosixPath(part_path).parent), target))
-
-
-def _relationships(zf: zipfile.ZipFile, part_path: str) -> dict[str, dict[str, str]]:
-    root = _read_xml(zf, _relationship_path(part_path))
-    if root is None:
-        return {}
-    rels: dict[str, dict[str, str]] = {}
-    for rel in list(root):
-        rel_id = rel.attrib.get("Id")
-        target = rel.attrib.get("Target")
-        rel_type = rel.attrib.get("Type", "")
-        if rel_id and target:
-            rels[rel_id] = {"type": rel_type, "target": _resolve_target(part_path, target)}
-    return rels
-
-
-def _canvas(zf: zipfile.ZipFile) -> dict[str, float | str]:
-    root = _read_xml(zf, "ppt/presentation.xml")
-    width_emu = 12192000
-    height_emu = 6858000
-    if root is not None:
-        size = root.find("p:sldSz", NS)
-        if size is not None:
-            width_emu = int(size.get("cx", str(width_emu)))
-            height_emu = int(size.get("cy", str(height_emu)))
-    width_px = _emu_to_px(width_emu)
-    height_px = _emu_to_px(height_emu)
-    return {
-        "width_emu": width_emu,
-        "height_emu": height_emu,
-        "width_px": round(width_px, 2),
-        "height_px": round(height_px, 2),
-        "aspect_ratio": round(width_px / height_px, 4) if height_px else "unknown",
-    }
-
-
-def _bounds(node: ET.Element) -> dict[str, float] | None:
-    off = node.find(".//a:xfrm/a:off", NS)
-    ext = node.find(".//a:xfrm/a:ext", NS)
-    if off is None or ext is None:
-        return None
-    return {
-        "left": _emu_to_px(off.get("x")),
-        "top": _emu_to_px(off.get("y")),
-        "width": _emu_to_px(ext.get("cx")),
-        "height": _emu_to_px(ext.get("cy")),
-    }
-
-
-def _normalized_bounds(bounds: dict[str, float], canvas: dict[str, float | str]) -> dict[str, float]:
-    width = float(canvas.get("width_px") or 1)
-    height = float(canvas.get("height_px") or 1)
-    return {
-        "left": round(bounds["left"] / width, 4),
-        "top": round(bounds["top"] / height, 4),
-        "width": round(bounds["width"] / width, 4),
-        "height": round(bounds["height"] / height, 4),
-    }
-
-
-def _rounded_box(bounds: dict[str, float]) -> tuple[int, int, int, int]:
-    return (
-        round(bounds["left"] / 4),
-        round(bounds["top"] / 4),
-        round(bounds["width"] / 4),
-        round(bounds["height"] / 4),
-    )
-
-
-def _color_from_node(node: ET.Element | None) -> str | None:
-    if node is None:
-        return None
-    srgb = node.find(".//a:srgbClr", NS)
-    scheme = node.find(".//a:schemeClr", NS)
-    if srgb is not None:
-        return _hex(srgb.get("val"))
-    if scheme is not None and scheme.get("val"):
-        return f"scheme:{scheme.get('val')}"
-    return None
-
-
-def _gradient_signature(node: ET.Element | None) -> str | None:
-    if node is None:
-        return None
-    colors: list[str] = []
-    for gs in node.findall(".//a:gs", NS):
-        color = _color_from_node(gs)
-        if color:
-            colors.append(color)
-    return "gradient:" + "|".join(colors) if colors else None
+from pptx_common import (
+    NS,
+    bounds as _bounds,
+    canvas as _canvas,
+    color_from_node as _color_from_node,
+    gradient_signature as _gradient_signature,
+    is_citation as _is_citation,
+    is_placeholder as _is_placeholder,
+    normalized_bounds as _normalized_bounds,
+    read_xml as _read_xml,
+    relationships as _relationships,
+    rounded_box as _rounded_box,
+    shape_text as _shape_text,
+    slide_layout_path as _slide_layout_path,
+    slide_master_path as _slide_master_path,
+    slide_number as _slide_number,
+    target_hash as _target_hash,
+)
 
 
 def _shape_visual(shape: ET.Element) -> dict[str, str]:
@@ -166,41 +43,6 @@ def _shape_visual(shape: ET.Element) -> dict[str, str]:
     )
     line = _color_from_node(sppr.find("a:ln/a:solidFill", NS)) or "transparent"
     return {"fill": fill, "line": line}
-
-
-def _shape_text(shape: ET.Element) -> str:
-    parts = [node.text.strip() for node in shape.findall(".//a:t", NS) if node.text and node.text.strip()]
-    return " ".join(parts)
-
-
-def _is_placeholder(shape: ET.Element) -> bool:
-    return shape.find(".//p:ph", NS) is not None
-
-
-def _target_hash(zf: zipfile.ZipFile, target: str) -> str | None:
-    if target not in zf.namelist():
-        return None
-    return hashlib.sha1(zf.read(target)).hexdigest()
-
-
-def _slide_layout_path(zf: zipfile.ZipFile, slide_path: str) -> str | None:
-    for rel in _relationships(zf, slide_path).values():
-        if rel.get("type", "").endswith("/slideLayout"):
-            return rel.get("target")
-    return None
-
-
-def _slide_master_path(zf: zipfile.ZipFile, layout_path: str | None) -> str | None:
-    if not layout_path:
-        return None
-    for rel in _relationships(zf, layout_path).values():
-        if rel.get("type", "").endswith("/slideMaster"):
-            return rel.get("target")
-    return None
-
-
-def _is_citation(text: str) -> bool:
-    return bool(re.search(r"\b(et al\.?|arXiv|doi|DOI|Nature|Science|Proceedings)\b", text) or re.search(r"\b(19|20)\d{2}\b", text))
 
 
 def _infer_role(record: dict[str, Any], canvas: dict[str, float | str]) -> str:

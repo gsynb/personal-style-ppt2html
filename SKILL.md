@@ -1,6 +1,6 @@
 ---
 name: personal-style-ppt2html
-description: Use when converting PPTX decks into serious academic HTML presentations, video-ready slide previews, or reusable personal-style templates, especially when prior decks contain slide-layout logos, institution marks, header rules, scientific figures, citations, equations, or research-note material.
+description: Use when converting PPTX decks into serious academic HTML presentations, video-ready slide previews, or reusable personal-style templates, especially when prior decks contain slide-layout logos, institution marks, header rules, scientific figures, citations, equations, or research-note material. Do not use for pixel-perfect PowerPoint rendering or decorative marketing decks.
 ---
 
 # Personal Style PPT2HTML
@@ -10,7 +10,15 @@ Create restrained, institution-aware academic HTML presentations or research not
 ## Workflow
 
 1. **Collect sources.** Identify reference PPTX files, research notes, figures, citations, unit/lab assets, and the requested output mode: `slides`, `notes`, or `recording`.
-2. **Extract style.** When a PPTX reference exists, run:
+2. **Choose the path.**
+
+   | User goal | Required command | Optional commands |
+   |---|---|---|
+   | Quick HTML preview | `python scripts/pptx_to_academic_html.py reference.pptx -o work/html-preview --motion none` | `--profile work/style-profile.json` |
+   | Reusable style tokens | `extract_pptx_style.py` then `build_theme_css.py` | `make_asset_manifest.py` |
+   | Full personal style system | `python scripts/run_pipeline.py reference.pptx -o work/pipeline --motion recording` | Vision review of screenshots plus `asset-registry.json` |
+
+3. **Extract style.** For the full manual pipeline, run:
 
    ```bash
    python scripts/extract_pptx_style.py reference.pptx -o work/style-profile.json
@@ -27,17 +35,24 @@ Create restrained, institution-aware academic HTML presentations or research not
 
    Use `--motion none` for the most conservative output.
 
-3. **Lock the design system.** Use `style-profile.json` for font, color, title alignment, citation placement, image density, common layout classes, and whether motion should be `none`, `subtle`, `recording`, or `demo`. Do not copy bad artifacts blindly; preserve the user's serious academic taste.
-4. **Mine reusable visuals.** Use `asset-registry.json` to distinguish inherited assets (`slide_master`, `slide_layout`) from manually repeated slide-local objects (`manual_repeat`). Treat the registry as evidence, not as an automatic permission to reuse factual figures.
-5. **Build from the template.** Copy `assets/academic-html-template/`, replace placeholder content, and merge `theme.generated.css` into `theme.css` or load it after `theme.css`.
-6. **Use references only as needed.**
+4. **Lock the design system.** Use `style-profile.json` for font, color, title alignment, citation placement, image density, common layout classes, and whether motion should be `none`, `subtle`, `recording`, or `demo`. Do not copy bad artifacts blindly; preserve the user's serious academic taste.
+5. **Mine reusable visuals.** Use `asset-registry.json` to distinguish inherited assets (`slide_master`, `slide_layout`) from manually repeated slide-local objects (`manual_repeat`). Treat the registry as evidence, not as an automatic permission to reuse factual figures.
+6. **Build from the template.** Copy `assets/academic-html-template/`, replace placeholder content, and load generated tokens after base styles:
+
+   ```html
+   <link rel="stylesheet" href="./theme.css">
+   <link rel="stylesheet" href="./components.css">
+   <link rel="stylesheet" href="./theme.generated.css">
+   ```
+
+7. **Use references only as needed.**
    - `references/academic-style-rules.md`: tone, evidence discipline, visual restraint.
    - `references/html-layout-patterns.md`: slide/note patterns and responsive rules.
    - `references/institution-brand-rules.md`: school, lab, group, and logo handling.
    - `references/imagegen-asset-guidelines.md`: when generated raster assets are safe.
    - `references/animation-and-optimization.md`: restrained motion presets, video-ready output, image optimization, and animation audit rules.
    - `references/reusable-visual-mining.md`: asset registry semantics, manual-repeat detection, and optional vision review schema.
-7. **Validate.** Run:
+8. **Validate.** Run:
 
    ```bash
    python scripts/audit_html_layout.py path/to/index.html

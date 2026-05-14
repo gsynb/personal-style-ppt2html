@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -154,6 +155,54 @@ SLIDE_MASTER_1_RELS_XML = """\
 </Relationships>
 """
 
+SLIDE_MASTER_DUPLICATE_XML = """\
+<p:sldMaster xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+             xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <p:cSld><p:spTree>
+    <p:pic>
+      <p:spPr><a:xfrm><a:off x="106019" y="63907"/><a:ext cx="917438" cy="893906"/></a:xfrm></p:spPr>
+      <p:blipFill><a:blip r:embed="rId4"/></p:blipFill>
+    </p:pic>
+    <p:sp>
+      <p:spPr><a:xfrm><a:off x="914400" y="274320"/><a:ext cx="5000000" cy="400000"/></a:xfrm></p:spPr>
+      <p:txBody><a:p><a:r>
+        <a:rPr sz="2400"><a:latin typeface="Arial"/></a:rPr>
+        <a:t>Click to edit Master title style</a:t>
+      </a:r></a:p></p:txBody>
+    </p:sp>
+  </p:spTree></p:cSld>
+</p:sldMaster>
+"""
+
+SLIDE_MASTER_DUPLICATE_RELS_XML = """\
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image1.png"/>
+</Relationships>
+"""
+
+CHINESE_CITATION_SLIDE_XML = """\
+<p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+  <p:cSld><p:spTree>
+    <p:sp>
+      <p:spPr><a:xfrm><a:off x="914400" y="457200"/><a:ext cx="7315200" cy="640080"/></a:xfrm></p:spPr>
+      <p:txBody><a:p><a:r>
+        <a:rPr sz="3000"><a:latin typeface="微软雅黑"/></a:rPr>
+        <a:t>中文参考文献页</a:t>
+      </a:r></a:p></p:txBody>
+    </p:sp>
+    <p:sp>
+      <p:spPr><a:xfrm><a:off x="914400" y="5486400"/><a:ext cx="10058400" cy="365760"/></a:xfrm></p:spPr>
+      <p:txBody><a:p><a:r>
+        <a:rPr sz="1200"><a:latin typeface="微软雅黑"/></a:rPr>
+        <a:t>王明等，《物理学报》</a:t>
+      </a:r></a:p></p:txBody>
+    </p:sp>
+  </p:spTree></p:cSld>
+</p:sld>
+"""
+
 MANUAL_FOOTER_SHAPE_XML = """\
     <p:sp>
       <p:spPr>
@@ -205,6 +254,35 @@ def write_master_and_repeat_pptx(path: Path) -> None:
         zf.writestr("ppt/media/image2.png", b"master-logo")
 
 
+def write_duplicate_master_layout_pptx(path: Path) -> None:
+    with zipfile.ZipFile(path, "w") as zf:
+        zf.writestr("ppt/presentation.xml", PRESENTATION_XML)
+        zf.writestr("ppt/theme/theme1.xml", THEME_XML)
+        zf.writestr("ppt/slides/slide1.xml", SLIDE_1_XML)
+        zf.writestr("ppt/slides/_rels/slide1.xml.rels", SLIDE_1_RELS_XML)
+        zf.writestr("ppt/slideLayouts/slideLayout12.xml", LAYOUT_12_XML)
+        zf.writestr("ppt/slideLayouts/_rels/slideLayout12.xml.rels", LAYOUT_12_WITH_MASTER_RELS_XML)
+        zf.writestr("ppt/slideMasters/slideMaster1.xml", SLIDE_MASTER_DUPLICATE_XML)
+        zf.writestr("ppt/slideMasters/_rels/slideMaster1.xml.rels", SLIDE_MASTER_DUPLICATE_RELS_XML)
+        zf.writestr("ppt/media/image1.png", b"same-logo")
+
+
+def write_chinese_citation_pptx(path: Path) -> None:
+    with zipfile.ZipFile(path, "w") as zf:
+        zf.writestr("ppt/presentation.xml", PRESENTATION_XML)
+        zf.writestr("ppt/theme/theme1.xml", THEME_XML)
+        zf.writestr("ppt/slides/slide1.xml", CHINESE_CITATION_SLIDE_XML)
+
+
+def write_duplicate_media_pptx(path: Path) -> None:
+    with zipfile.ZipFile(path, "w") as zf:
+        zf.writestr("ppt/presentation.xml", PRESENTATION_XML)
+        zf.writestr("ppt/theme/theme1.xml", THEME_XML)
+        zf.writestr("ppt/slides/slide1.xml", SLIDE_1_XML)
+        zf.writestr("ppt/media/image1.png", b"same-image")
+        zf.writestr("ppt/media/image2.png", b"same-image")
+
+
 class AcademicHtmlToolTests(unittest.TestCase):
     def test_analyze_pptx_extracts_style_signals(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -253,6 +331,19 @@ class AcademicHtmlToolTests(unittest.TestCase):
             self.assertEqual(len(manifest["assets"]), 1)
             self.assertTrue((asset_dir / "image1.png").exists())
 
+    def test_asset_manifest_hashes_and_marks_duplicate_media(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            pptx = tmp_path / "duplicates.pptx"
+            asset_dir = tmp_path / "assets"
+            write_duplicate_media_pptx(pptx)
+
+            manifest = build_asset_manifest(pptx, asset_dir)
+
+        self.assertEqual(len(manifest["assets"]), 2)
+        self.assertEqual(manifest["assets"][0]["sha1"], manifest["assets"][1]["sha1"])
+        self.assertEqual(manifest["assets"][1]["duplicate_of"], "image1.png")
+
     def test_audit_html_file_checks_academic_basics(self):
         with tempfile.TemporaryDirectory() as tmp:
             html = Path(tmp) / "index.html"
@@ -293,6 +384,26 @@ class AcademicHtmlToolTests(unittest.TestCase):
         self.assertEqual(report["errors"], [])
         self.assertEqual(report["checks"]["has_print_css"], True)
 
+    def test_audit_warns_for_missing_img_alt_and_tiny_font(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            html = Path(tmp) / "index.html"
+            html.write_text(
+                """<!doctype html>
+<html><head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deck</title>
+<style>@media print { .academic-slide { break-after: page; } } .tiny { font-size: 8px; }</style>
+</head><body><main class="academic-deck"><section class="academic-slide"><img src="figure.png"><p class="tiny">too small</p></section></main></body></html>
+""",
+                encoding="utf-8",
+            )
+
+            report = audit_html_file(html)
+
+        self.assertEqual(report["errors"], [])
+        self.assertIn("Image tag is missing an alt attribute.", report["warnings"])
+        self.assertIn("Tiny font-size detected below 12px.", report["warnings"])
+
     def test_pptx_to_html_includes_reusable_layout_logo_and_bar(self):
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
@@ -320,6 +431,29 @@ class AcademicHtmlToolTests(unittest.TestCase):
 
         self.assertIn("pptx-master", html_text)
         self.assertIn('src="assets/image2.png"', html_text)
+
+    def test_pptx_to_html_deduplicates_master_layout_and_filters_english_placeholders(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            pptx = tmp_path / "duplicate.pptx"
+            out = tmp_path / "html"
+            write_duplicate_master_layout_pptx(pptx)
+
+            index = convert_pptx_to_html(pptx, out)
+            html_text = index.read_text(encoding="utf-8")
+
+        self.assertEqual(html_text.count('src="assets/image1.png"'), 1)
+        self.assertNotIn("Click to edit Master title style", html_text)
+
+    def test_extract_pptx_style_detects_chinese_citation_footer_without_year(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            pptx = Path(tmp) / "chinese-citation.pptx"
+            write_chinese_citation_pptx(pptx)
+
+            profile = analyze_pptx(pptx)
+
+        self.assertEqual(profile["style_summary"]["citation_footer_slides"], 1)
+        self.assertIn("王明等", profile["slides"][0]["citation_candidates"][0])
 
     def test_reusable_visual_registry_finds_master_layout_and_manual_repeats(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -380,6 +514,42 @@ class AcademicHtmlToolTests(unittest.TestCase):
 
         self.assertEqual(report["errors"], [])
         self.assertIn("Animation CSS is missing a prefers-reduced-motion guard.", report["warnings"])
+
+    def test_run_pipeline_creates_full_output_set(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            pptx = tmp_path / "sample.pptx"
+            out = tmp_path / "pipeline"
+            write_layout_pptx(pptx)
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPT_DIR / "run_pipeline.py"),
+                    str(pptx),
+                    "-o",
+                    str(out),
+                    "--motion",
+                    "none",
+                ],
+                check=False,
+                text=True,
+                capture_output=True,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertTrue((out / "style-profile.json").exists())
+            self.assertTrue((out / "reference-assets" / "manifest.json").exists())
+            self.assertTrue((out / "asset-registry.json").exists())
+            self.assertTrue((out / "theme.generated.css").exists())
+            self.assertTrue((out / "html-preview" / "index.html").exists())
+
+    def test_template_defaults_to_no_motion_for_conservative_academic_output(self):
+        template = (SCRIPT_DIR.parent / "assets" / "academic-html-template" / "index.html").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn('data-motion="none"', template)
 
 
 if __name__ == "__main__":

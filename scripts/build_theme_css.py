@@ -42,6 +42,7 @@ def css_from_profile(profile: dict[str, Any]) -> str:
   --academic-text: {text};
   --academic-accent: {accent};
   --academic-muted: {muted};
+  --academic-rule: rgba(32, 33, 36, 0.14);
   --academic-rule: color-mix(in srgb, var(--academic-text) 14%, transparent);
   --academic-font: {font_stack};
   --academic-aspect: {ratio};
@@ -81,7 +82,7 @@ body {{
 
 .academic-citation {{
   color: var(--academic-muted);
-  font-size: clamp(10px, 1.1vw, 14px);
+  font-size: clamp(12px, 1.1vw, 14px);
 }}
 
 .academic-rule {{

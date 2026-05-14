@@ -6,143 +6,31 @@ from __future__ import annotations
 import argparse
 import html
 import json
-import posixpath
 import re
 import zipfile
 from collections import Counter
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 from typing import Any
 from xml.etree import ElementTree as ET
 
-EMU_PER_INCH = 914400
-PX_PER_INCH = 96
-
-NS = {
-    "a": "http://schemas.openxmlformats.org/drawingml/2006/main",
-    "p": "http://schemas.openxmlformats.org/presentationml/2006/main",
-    "r": "http://schemas.openxmlformats.org/officeDocument/2006/relationships",
-}
+from pptx_common import (
+    NS,
+    PX_PER_INCH,
+    bounds as _bounds,
+    color_from_node as _color_from_node,
+    gradient_from_node as _gradient_from_node,
+    is_placeholder as _is_placeholder,
+    read_xml as _read_xml,
+    relationships as _relationships,
+    rounded_box as _rounded_box,
+    slide_layout_path as _slide_layout_path,
+    slide_master_path as _slide_master_path,
+    slide_number as _slide_number,
+    target_hash as _target_hash,
+    theme_colors as _theme_colors,
+)
 
 ALLOWED_MOTION = {"none", "subtle", "recording", "demo"}
-
-
-def _emu_to_px(value: str | int | None) -> float:
-    try:
-        return int(value or 0) / EMU_PER_INCH * PX_PER_INCH
-    except ValueError:
-        return 0.0
-
-
-def _read_xml(zf: zipfile.ZipFile, name: str) -> ET.Element | None:
-    if name not in zf.namelist():
-        return None
-    return ET.fromstring(zf.read(name))
-
-
-def _slide_number(path: str) -> int:
-    match = re.search(r"slide(\d+)\.xml$", path)
-    return int(match.group(1)) if match else 0
-
-
-def _hex(value: str | None) -> str | None:
-    if not value:
-        return None
-    value = value.strip().lstrip("#").upper()
-    if re.fullmatch(r"[0-9A-F]{6}", value):
-        return f"#{value}"
-    return None
-
-
-def _theme_colors(zf: zipfile.ZipFile) -> dict[str, str]:
-    root = _read_xml(zf, "ppt/theme/theme1.xml")
-    if root is None:
-        return {}
-    colors: dict[str, str] = {}
-    scheme = root.find(".//a:clrScheme", NS)
-    if scheme is None:
-        return colors
-    for child in list(scheme):
-        key = child.tag.split("}")[-1]
-        srgb = child.find(".//a:srgbClr", NS)
-        sys_color = child.find(".//a:sysClr", NS)
-        color = _hex(srgb.get("val") if srgb is not None else None)
-        if not color and sys_color is not None:
-            color = _hex(sys_color.get("lastClr") or sys_color.get("val"))
-        if color:
-            colors[key] = color
-    return colors
-
-
-def _color_from_node(node: ET.Element | None, theme: dict[str, str], fallback: str | None = None) -> str | None:
-    if node is None:
-        return fallback
-    srgb = node.find(".//a:srgbClr", NS)
-    scheme = node.find(".//a:schemeClr", NS)
-    if srgb is not None:
-        return _hex(srgb.get("val")) or fallback
-    if scheme is not None:
-        return theme.get(scheme.get("val", ""), fallback)
-    return fallback
-
-
-def _gradient_from_node(node: ET.Element | None, theme: dict[str, str]) -> str | None:
-    if node is None:
-        return None
-    stops: list[str] = []
-    for gs in node.findall(".//a:gs", NS):
-        color = _color_from_node(gs, theme)
-        if not color:
-            continue
-        try:
-            percent = int(gs.get("pos") or "0") / 1000
-        except ValueError:
-            percent = 0
-        stops.append(f"{color} {percent:.1f}%")
-    if not stops:
-        return None
-    if len(stops) == 1:
-        return stops[0].split()[0]
-    return f"linear-gradient(90deg, {', '.join(stops)})"
-
-
-def _bounds(node: ET.Element) -> dict[str, float] | None:
-    off = node.find(".//a:xfrm/a:off", NS)
-    ext = node.find(".//a:xfrm/a:ext", NS)
-    if off is None or ext is None:
-        return None
-    return {
-        "left": _emu_to_px(off.get("x")),
-        "top": _emu_to_px(off.get("y")),
-        "width": _emu_to_px(ext.get("cx")),
-        "height": _emu_to_px(ext.get("cy")),
-    }
-
-
-def _relationship_path(part_path: str) -> str:
-    part = PurePosixPath(part_path)
-    return str(part.parent / "_rels" / f"{part.name}.rels")
-
-
-def _resolve_target(part_path: str, target: str) -> str:
-    if target.startswith("/"):
-        return posixpath.normpath(target.lstrip("/"))
-    return posixpath.normpath(posixpath.join(str(PurePosixPath(part_path).parent), target))
-
-
-def _relationships(zf: zipfile.ZipFile, part_path: str) -> dict[str, dict[str, str]]:
-    rel_path = _relationship_path(part_path)
-    root = _read_xml(zf, rel_path)
-    if root is None:
-        return {}
-    rels: dict[str, dict[str, str]] = {}
-    for rel in list(root):
-        rel_id = rel.attrib.get("Id")
-        target = rel.attrib.get("Target")
-        rel_type = rel.attrib.get("Type", "")
-        if not rel_id or not target:
-            continue
-        rels[rel_id] = {"type": rel_type, "target": _resolve_target(part_path, target)}
-    return rels
 
 
 def _paragraph_text(paragraph: ET.Element) -> str:
@@ -239,6 +127,24 @@ def _extract_assets(zf: zipfile.ZipFile, output_assets: Path) -> None:
             (output_assets / Path(name).name).write_bytes(zf.read(name))
 
 
+def _dedupe_signature(
+    zf: zipfile.ZipFile,
+    tag: str,
+    bounds: dict[str, float],
+    media: str = "",
+    visual: dict[str, str] | None = None,
+    text: str = "",
+) -> str:
+    if tag == "pic":
+        identity = _target_hash(zf, media) or Path(media).name
+    elif text:
+        identity = re.sub(r"\s+", " ", text).strip().lower()[:160]
+    else:
+        visual = visual or {}
+        identity = f"{visual.get('fill')}|{visual.get('line')}"
+    return f"{tag}:{identity}:{_rounded_box(bounds)}"
+
+
 def _normalize_motion(motion: str) -> str:
     if motion not in ALLOWED_MOTION:
         allowed = ", ".join(sorted(ALLOWED_MOTION))
@@ -246,12 +152,16 @@ def _normalize_motion(motion: str) -> str:
     return motion
 
 
-def _is_placeholder(shape: ET.Element) -> bool:
-    return shape.find(".//p:ph", NS) is not None
-
-
 def _is_master_placeholder_text(text: str) -> bool:
-    return text.startswith("单击此处") or text in {"‹#›"}
+    normalized = re.sub(r"\s+", " ", text).strip().lower()
+    return (
+        text.startswith("单击此处")
+        or text in {"‹#›"}
+        or "click to edit" in normalized
+        or "master title style" in normalized
+        or "master text styles" in normalized
+        or "edit master" in normalized
+    )
 
 
 def _convert_tree_elements(
@@ -263,8 +173,10 @@ def _convert_tree_elements(
     asset_dir_name: str,
     layer_class: str = "",
     skip_placeholders: bool = False,
+    seen: set[str] | None = None,
 ) -> str:
     elements: list[str] = []
+    seen = seen if seen is not None else set()
 
     for child in root.findall(".//p:cSld/p:spTree/*", NS):
         tag = child.tag.split("}")[-1]
@@ -279,6 +191,10 @@ def _convert_tree_elements(
             media = rel.get("target", "") if rel and rel.get("type", "").endswith("/image") else ""
             if not media:
                 continue
+            signature = _dedupe_signature(zf, tag, bounds, media=media)
+            if signature in seen:
+                continue
+            seen.add(signature)
             filename = Path(media).name
             extension = Path(filename).suffix.lower()
             classes = f"pptx-img {layer_class}".strip()
@@ -303,6 +219,10 @@ def _convert_tree_elements(
                 continue
             visual = _shape_visual(child, theme)
             if text:
+                signature = _dedupe_signature(zf, tag, bounds, visual=visual, text=text)
+                if signature in seen:
+                    continue
+                seen.add(signature)
                 font_size_px = text_style["font_size_pt"] * PX_PER_INCH / 72
                 classes = f"pptx-text {layer_class}".strip()
                 if bounds["top"] > 560:
@@ -319,18 +239,15 @@ def _convert_tree_elements(
                 elements.append(f'<div class="{classes}" style="{style}">{_safe_text(text)}</div>')
             else:
                 if visual["fill"] != "transparent" or visual["line"] != "transparent":
+                    signature = _dedupe_signature(zf, tag, bounds, visual=visual)
+                    if signature in seen:
+                        continue
+                    seen.add(signature)
                     style = _css_box(bounds) + f"background:{visual['fill']};border:1px solid {visual['line']};"
                     classes = f"pptx-shape {layer_class}".strip()
                     elements.append(f'<div class="{classes}" style="{style}"></div>')
 
     return "\n".join(elements)
-
-
-def _slide_layout_path(zf: zipfile.ZipFile, slide_path: str) -> str | None:
-    for rel in _relationships(zf, slide_path).values():
-        if rel.get("type", "").endswith("/slideLayout"):
-            return rel.get("target")
-    return None
 
 
 def _convert_layout(
@@ -339,6 +256,7 @@ def _convert_layout(
     theme: dict[str, str],
     default_font: str,
     asset_dir_name: str,
+    seen: set[str] | None = None,
 ) -> str:
     if not layout_path:
         return ""
@@ -354,16 +272,8 @@ def _convert_layout(
         asset_dir_name,
         layer_class="pptx-layout",
         skip_placeholders=True,
+        seen=seen,
     )
-
-
-def _slide_master_path(zf: zipfile.ZipFile, layout_path: str | None) -> str | None:
-    if not layout_path:
-        return None
-    for rel in _relationships(zf, layout_path).values():
-        if rel.get("type", "").endswith("/slideMaster"):
-            return rel.get("target")
-    return None
 
 
 def _convert_master(
@@ -372,6 +282,7 @@ def _convert_master(
     theme: dict[str, str],
     default_font: str,
     asset_dir_name: str,
+    seen: set[str] | None = None,
 ) -> str:
     if not master_path:
         return ""
@@ -387,6 +298,7 @@ def _convert_master(
         asset_dir_name,
         layer_class="pptx-layout pptx-master",
         skip_placeholders=True,
+        seen=seen,
     )
 
 
@@ -402,14 +314,16 @@ def _convert_slide(
     if root is None:
         return ""
     layout_path = _slide_layout_path(zf, slide_path)
+    seen: set[str] = set()
     master_elements = _convert_master(
         zf,
         _slide_master_path(zf, layout_path),
         theme,
         default_font,
         asset_dir_name,
+        seen=seen,
     )
-    layout_elements = _convert_layout(zf, layout_path, theme, default_font, asset_dir_name)
+    layout_elements = _convert_layout(zf, layout_path, theme, default_font, asset_dir_name, seen=seen)
     slide_elements = _convert_tree_elements(
         zf,
         root,
@@ -417,6 +331,7 @@ def _convert_slide(
         theme,
         default_font,
         asset_dir_name,
+        seen=seen,
     )
     combined = "\n".join(element for element in [master_elements, layout_elements, slide_elements] if element)
 

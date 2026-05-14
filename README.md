@@ -72,13 +72,23 @@ The generated HTML can also carry a `data-motion` preset. Motion is intentionall
     ├── extract_pptx_style.py
     ├── make_asset_manifest.py
     ├── mine_reusable_visuals.py
+    ├── pptx_common.py
     ├── pptx_to_academic_html.py
+    ├── run_pipeline.py
     └── test_academic_html_tools.py
 ```
 
 ## Quick Start
 
 Use Python 3. No required third-party package is needed for the core XML parsing path.
+
+For the full workflow:
+
+```bash
+python scripts/run_pipeline.py your-deck.pptx -o work/pipeline --motion recording
+```
+
+For manual control:
 
 ```bash
 python scripts/extract_pptx_style.py your-deck.pptx -o work/style-profile.json
@@ -96,6 +106,8 @@ work/html-preview/index.html
 ```
 
 The generated deck supports keyboard navigation, reduced-motion preferences, and print/PDF export.
+
+When using `theme.generated.css` with the reusable template, link it after `theme.css` and `components.css` so extracted tokens override the base defaults.
 
 ## Motion Presets
 
@@ -139,6 +151,7 @@ The tests cover:
 - HTML auditing,
 - PPTX-to-HTML conversion with slide-layout logo and header-bar preservation,
 - slide-master preservation and reusable visual registry mining,
+- master/layout duplicate filtering and placeholder cleanup,
 - motion preset output, optimized image attributes, and animation safety warnings.
 
 ## Current Limitations
