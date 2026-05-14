@@ -2,9 +2,11 @@
 
 English | [中文](README.zh-CN.md)
 
-`personal-style-ppt2html` is a Codex skill and utility toolkit for converting a user's existing PowerPoint style into serious, reusable academic HTML presentations.
+`personal-style-ppt2html` is an Agent Skill and Python utility toolkit for converting a user's existing PowerPoint style into serious, reusable academic HTML presentations.
 
 It is designed for people who already have a personal or institutional presentation style in `.pptx` files and want to reuse that style in HTML without switching to flashy generic web templates.
+
+It can be used by Codex, Claude Code, or any agent/runtime that can read a `SKILL.md` folder and run local Python scripts. Codex-specific UI metadata lives in `agents/openai.yaml`; the core workflow is in `SKILL.md`, `references/`, `scripts/`, and `assets/`.
 
 ## What It Can Do
 
@@ -121,7 +123,11 @@ Run `mine_reusable_visuals.py` when you want to understand what can become part 
 
 For ambiguous cases, use rendered slide screenshots and `asset-registry.json` together with a vision-capable model. Vision should label and flag candidates, not regenerate official logos, paper figures, plots, or factual content.
 
-## Install as a Codex Skill
+## Install as an Agent Skill
+
+This repository follows the filesystem-based `SKILL.md` pattern used by Agent Skills. The scripts also work manually from the command line, so the repository is useful even outside an agent environment.
+
+### Codex
 
 Clone the repository into your Codex skills directory:
 
@@ -134,6 +140,23 @@ Then invoke it as:
 ```text
 Use $personal-style-ppt2html to convert my reference PPTX into an academic HTML deck.
 ```
+
+### Claude Code
+
+Clone the same repository into Claude Code's personal skills directory:
+
+```bash
+git clone https://github.com/gsynb/personal-style-ppt2html.git ~/.claude/skills/personal-style-ppt2html
+```
+
+For a project-local install that can be shared through a repository, place it under the project:
+
+```bash
+mkdir -p .claude/skills
+git clone https://github.com/gsynb/personal-style-ppt2html.git .claude/skills/personal-style-ppt2html
+```
+
+Then ask Claude Code for the same task in natural language, or invoke the skill directly if your Claude Code setup exposes skill commands.
 
 ## Validation
 

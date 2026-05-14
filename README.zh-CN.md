@@ -2,9 +2,11 @@
 
 [English](README.md) | 中文
 
-`personal-style-ppt2html` 是一个 Codex skill 和 PPTX 转 HTML 工具集，用来把用户已有 PowerPoint 中的个人风格、单位风格和学术汇报风格转成可复用的 HTML presentation。
+`personal-style-ppt2html` 是一个 Agent Skill 和 Python PPTX 转 HTML 工具集，用来把用户已有 PowerPoint 中的个人风格、单位风格和学术汇报风格转成可复用的 HTML presentation。
 
 它适合那些已经有自己常用 `.pptx` 模板、组会汇报风格、单位 logo 横条、论文图展示习惯的人。目标不是生成花哨网页模板，而是保留严肃、克制、可复用的个人学术表达系统。
+
+它不只适用于 Codex，也可以用于 Claude Code，或者任何能够读取 `SKILL.md` 目录并运行本地 Python 脚本的 agent / runtime。`agents/openai.yaml` 是 Codex 的 UI 元数据；核心工作流在 `SKILL.md`、`references/`、`scripts/` 和 `assets/` 中。
 
 ## 这个仓库能做什么
 
@@ -121,7 +123,11 @@ work/html-preview/index.html
 
 对于语义不确定的元素，可以把渲染截图和 `asset-registry.json` 一起交给视觉模型审阅。视觉模型应该负责标注和排除风险元素，而不是重新生成官方 logo、论文图、实验图表或事实性内容。
 
-## 作为 Codex Skill 安装
+## 作为 Agent Skill 安装
+
+这个仓库遵循基于文件系统的 `SKILL.md` skill 结构。即使不在 agent 环境中使用，也可以直接从命令行运行 `scripts/` 里的 Python 工具。
+
+### Codex
 
 把仓库克隆到 Codex skills 目录：
 
@@ -134,6 +140,23 @@ git clone https://github.com/gsynb/personal-style-ppt2html.git ~/.codex/skills/p
 ```text
 Use $personal-style-ppt2html to convert my reference PPTX into an academic HTML deck.
 ```
+
+### Claude Code
+
+把同一个仓库克隆到 Claude Code 的个人 skills 目录：
+
+```bash
+git clone https://github.com/gsynb/personal-style-ppt2html.git ~/.claude/skills/personal-style-ppt2html
+```
+
+如果希望作为某个项目的本地 skill 随仓库共享，可以放到项目目录下：
+
+```bash
+mkdir -p .claude/skills
+git clone https://github.com/gsynb/personal-style-ppt2html.git .claude/skills/personal-style-ppt2html
+```
+
+之后可以直接用自然语言让 Claude Code 调用它；如果你的 Claude Code 环境暴露了 skill command，也可以直接按 skill 名称调用。
 
 ## 验证
 
