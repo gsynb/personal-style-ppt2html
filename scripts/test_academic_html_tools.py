@@ -16,6 +16,7 @@ from make_asset_manifest import build_asset_manifest
 from audit_html_layout import audit_html_file
 from pptx_to_academic_html import convert_pptx_to_html
 from mine_reusable_visuals import build_reusable_visual_registry
+from prepare_imagegen_briefs import build_imagegen_briefs
 
 
 PRESENTATION_XML = """\
@@ -477,6 +478,24 @@ class AcademicHtmlToolTests(unittest.TestCase):
             )
         )
 
+    def test_prepare_imagegen_briefs_uses_style_evidence_and_safety_boundary(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            pptx = Path(tmp) / "master.pptx"
+            write_master_and_repeat_pptx(pptx)
+
+            profile = analyze_pptx(pptx)
+            registry = build_reusable_visual_registry(pptx, min_occurrences=2)
+            briefs = build_imagegen_briefs(profile, registry)
+
+        self.assertEqual(briefs["generation_mode"], "optional-agent-imagegen")
+        self.assertEqual(len(briefs["asset_briefs"]), 3)
+        self.assertIn("institution_logo", briefs["style_fingerprint"]["reusable_roles"])
+        self.assertIn("#4472C4", briefs["asset_briefs"][0]["prompt"])
+        self.assertIn("No text, no captions, no logos", briefs["asset_briefs"][0]["prompt"])
+        self.assertIn("raw-slide-titles-excluded", briefs["style_fingerprint"]["content_cue_policy"])
+        self.assertNotIn("Graph Transformer", briefs["asset_briefs"][0]["prompt"])
+        self.assertEqual(briefs["asset_briefs"][0]["output_filename"], "assets/generated/style-cover-backdrop.png")
+
     def test_pptx_to_html_supports_motion_and_image_optimization(self):
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
@@ -541,6 +560,7 @@ class AcademicHtmlToolTests(unittest.TestCase):
             self.assertTrue((out / "style-profile.json").exists())
             self.assertTrue((out / "reference-assets" / "manifest.json").exists())
             self.assertTrue((out / "asset-registry.json").exists())
+            self.assertTrue((out / "imagegen-briefs.json").exists())
             self.assertTrue((out / "theme.generated.css").exists())
             self.assertTrue((out / "html-preview" / "index.html").exists())
 

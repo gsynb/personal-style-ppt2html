@@ -14,6 +14,7 @@ It can be used by Codex, Claude Code, or any agent/runtime that can read a `SKIL
 - Preserve reusable slide-layout elements such as institution logos, header bars, footer rules, and recurring visual marks.
 - Preserve slide-master elements and detect manually repeated visual blocks that are not stored in layouts.
 - Build an `asset-registry.json` of reusable visual candidates with semantic roles, source levels, slide coverage, exact bounds, and confidence.
+- Build an `imagegen-briefs.json` prompt pack for optional style-matched generated backgrounds, divider motifs, and backplate textures when the active agent has image generation tools.
 - Extract typography, theme colors, slide size, title positions, citation-footers, image density, and common layout patterns from prior decks.
 - Copy embedded PPTX media into local HTML assets.
 - Generate CSS design tokens from the extracted style profile.
@@ -52,6 +53,8 @@ This matters because logos and style bars are often not stored directly on each 
 
 The generated HTML can also carry a `data-motion` preset. Motion is intentionally limited to short opacity and transform entrances, with reduced-motion and print fallbacks, so the result works for both academic presenting and screen recording.
 
+When an agent runtime exposes image generation, the workflow can also create non-factual supporting visuals from the extracted style fingerprint. The repository does not assume that every agent has this capability: it first writes `imagegen-briefs.json`, then the agent may execute those briefs and save the selected outputs under the final HTML project's `assets/generated/` directory.
+
 ## Repository Structure
 
 ```text
@@ -76,6 +79,7 @@ The generated HTML can also carry a `data-motion` preset. Motion is intentionall
     ├── mine_reusable_visuals.py
     ├── pptx_common.py
     ├── pptx_to_academic_html.py
+    ├── prepare_imagegen_briefs.py
     ├── run_pipeline.py
     └── test_academic_html_tools.py
 ```
@@ -96,6 +100,7 @@ For manual control:
 python scripts/extract_pptx_style.py your-deck.pptx -o work/style-profile.json
 python scripts/make_asset_manifest.py your-deck.pptx -o work/reference-assets
 python scripts/mine_reusable_visuals.py your-deck.pptx -o work/asset-registry.json
+python scripts/prepare_imagegen_briefs.py work/style-profile.json --registry work/asset-registry.json -o work/imagegen-briefs.json
 python scripts/build_theme_css.py work/style-profile.json -o work/theme.generated.css
 python scripts/pptx_to_academic_html.py your-deck.pptx -o work/html-preview --profile work/style-profile.json --motion recording
 python scripts/audit_html_layout.py work/html-preview/index.html
@@ -122,6 +127,18 @@ The motion system avoids looping decoration, keeps slide-layout logos and rules 
 Run `mine_reusable_visuals.py` when you want to understand what can become part of the user's reusable style system. It identifies inherited objects from slide layouts and slide masters, plus slide-local objects that repeat with the same geometry and visual identity.
 
 For ambiguous cases, use rendered slide screenshots and `asset-registry.json` together with a vision-capable model. Vision should label and flag candidates, not regenerate official logos, paper figures, plots, or factual content.
+
+## Optional Generated Assets
+
+If the active agent has image generation capability, use `imagegen-briefs.json` to generate only safe, non-factual assets:
+
+- `style-cover-backdrop.png`,
+- `style-section-divider.png`,
+- `style-figure-backplate.png`.
+
+Save selected outputs in the final HTML project under `assets/generated/` and record the prompt/tool provenance. These generated assets should extend the extracted style; they must not replace real PPTX-derived logos, institution marks, paper figures, charts, or factual diagrams.
+
+By default, raw slide titles are excluded from image-generation prompts to avoid leaking private or factual text. Use `--include-title-cues` only when topic-aware motifs are explicitly desired and safe.
 
 ## Install as an Agent Skill
 
@@ -172,6 +189,7 @@ The tests cover:
 - CSS token generation,
 - media asset extraction,
 - HTML auditing,
+- image-generation brief preparation,
 - PPTX-to-HTML conversion with slide-layout logo and header-bar preservation,
 - slide-master preservation and reusable visual registry mining,
 - master/layout duplicate filtering and placeholder cleanup,

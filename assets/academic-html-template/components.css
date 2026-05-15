@@ -29,6 +29,30 @@
   align-content: center;
 }
 
+.has-generated-bg > :not(.generated-bg) {
+  position: relative;
+  z-index: 1;
+}
+
+.generated-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.16;
+  pointer-events: none;
+}
+
+.generated-bg.is-backplate {
+  inset: var(--slide-pad-y) var(--slide-pad-x);
+  width: auto;
+  height: auto;
+  border: 1px solid var(--academic-rule);
+  opacity: 0.12;
+}
+
 .title-block {
   display: grid;
   gap: 18px;

@@ -14,6 +14,7 @@
 - 保留 PPTX 中可复用的 slide-layout 元素，例如单位 logo、顶部横条、底部规则线、页眉页脚视觉标识。
 - 保留 slide-master 元素，并检测那些没有放在 layout 里、但被手动复制到多页的重复视觉块。
 - 生成 `asset-registry.json`，记录可复用视觉候选项的语义角色、来源层级、覆盖页码、精确坐标和置信度。
+- 生成 `imagegen-briefs.json`，当当前 agent 具备生图工具时，可据此生成与 PPT 风格相似的背景、分隔页 motif 和内容 backplate。
 - 从历史 PPTX 中提取字体、主题色、页面比例、标题位置、citation footer、图片密度和常见页面布局。
 - 把 PPTX 内嵌媒体复制到本地 HTML assets。
 - 根据提取出的风格画像生成 CSS design tokens。
@@ -52,6 +53,8 @@
 
 生成的 HTML 还可以带 `data-motion` 动效预设。动效只允许短促的透明度和轻微位移动画，并且包含 reduced-motion 和 print 降级规则，所以既适合学术汇报，也适合录屏展示。
 
+如果当前 agent runtime 暴露了生图能力，工作流还可以基于提取出的风格指纹生成非事实性的辅助视觉素材。仓库不会假设所有 agent 都有这个能力：它会先写出 `imagegen-briefs.json`，然后由具备生图能力的 agent 执行这些 brief，并把选中的输出保存到最终 HTML 项目的 `assets/generated/` 目录。
+
 ## 仓库结构
 
 ```text
@@ -76,6 +79,7 @@
     ├── mine_reusable_visuals.py
     ├── pptx_common.py
     ├── pptx_to_academic_html.py
+    ├── prepare_imagegen_briefs.py
     ├── run_pipeline.py
     └── test_academic_html_tools.py
 ```
@@ -96,6 +100,7 @@ python scripts/run_pipeline.py your-deck.pptx -o work/pipeline --motion recordin
 python scripts/extract_pptx_style.py your-deck.pptx -o work/style-profile.json
 python scripts/make_asset_manifest.py your-deck.pptx -o work/reference-assets
 python scripts/mine_reusable_visuals.py your-deck.pptx -o work/asset-registry.json
+python scripts/prepare_imagegen_briefs.py work/style-profile.json --registry work/asset-registry.json -o work/imagegen-briefs.json
 python scripts/build_theme_css.py work/style-profile.json -o work/theme.generated.css
 python scripts/pptx_to_academic_html.py your-deck.pptx -o work/html-preview --profile work/style-profile.json --motion recording
 python scripts/audit_html_layout.py work/html-preview/index.html
@@ -122,6 +127,18 @@ work/html-preview/index.html
 当你想判断哪些元素能沉淀成个人风格系统时，运行 `mine_reusable_visuals.py`。它会识别 layout 和 master 继承的对象，也会识别那些位置、类型和视觉身份重复出现的 slide-local 元素。
 
 对于语义不确定的元素，可以把渲染截图和 `asset-registry.json` 一起交给视觉模型审阅。视觉模型应该负责标注和排除风险元素，而不是重新生成官方 logo、论文图、实验图表或事实性内容。
+
+## 可选生成素材
+
+如果当前 agent 具备生图能力，可以读取 `imagegen-briefs.json` 生成安全的非事实性素材：
+
+- `style-cover-backdrop.png`；
+- `style-section-divider.png`；
+- `style-figure-backplate.png`。
+
+选中的输出应保存到最终 HTML 项目的 `assets/generated/`，并记录 prompt 和工具来源。这些生成素材只能扩展提取出来的风格，不能替代 PPTX 中真实提取出的 logo、单位标识、论文图、数据图或事实性方法图。
+
+默认情况下，生图 prompt 不会包含原始 slide title，避免把私人文本或事实内容泄露给生图模型。只有在明确需要主题化 motif 且文本可安全使用时，才使用 `--include-title-cues`。
 
 ## 作为 Agent Skill 安装
 
@@ -172,6 +189,7 @@ python scripts/test_academic_html_tools.py
 - CSS token 生成；
 - PPTX 媒体资产提取；
 - HTML 审计；
+- image generation brief 生成；
 - 带 slide-layout logo 和顶部横条的 PPTX 转 HTML；
 - slide-master 保留和可复用视觉 registry 挖掘；
 - master/layout 重复元素过滤和母版占位文本清理；
