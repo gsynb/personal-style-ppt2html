@@ -8,7 +8,8 @@ Use image generation only for reusable non-factual visual assets that support a 
 - subtle research texture overlays,
 - abstract graph, lattice, molecule, crystal, or network motifs,
 - chapter divider imagery,
-- neutral decorative backplates behind title slides.
+- neutral decorative backplates behind title slides,
+- transparent-background sheets of blank arrows, chevrons, connectors, tabs, and module panels derived from extracted PPTX shape grammar.
 
 ## Bad Uses
 
@@ -62,6 +63,8 @@ The default generated asset pack is intentionally small:
 - `style-cover-backdrop.png`: low-opacity title slide background.
 - `style-section-divider.png`: sparse divider motif.
 - `style-figure-backplate.png`: subtle texture behind real figures or HTML/SVG diagrams.
+- `style-flow-elements.png`: optional transparent-background sheet of non-factual chevrons, connector arrows, corner markers, and accent rules when flow grammar is detected.
+- `style-module-panels.png`: optional transparent-background sheet of blank module boxes, tabs, timeline cards, and callout panels when module grammar is detected.
 
 Use these as optional supporting assets. They should not replace extracted logos, header rules, slide-master elements, or factual research figures.
 

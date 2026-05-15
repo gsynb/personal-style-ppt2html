@@ -571,6 +571,23 @@ class AcademicHtmlToolTests(unittest.TestCase):
         self.assertNotIn("Graph Transformer", briefs["asset_briefs"][0]["prompt"])
         self.assertEqual(briefs["asset_briefs"][0]["output_filename"], "assets/generated/style-cover-backdrop.png")
 
+    def test_prepare_imagegen_briefs_adds_shape_asset_sheets_for_flow_grammar(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            pptx = Path(tmp) / "flow-modules.pptx"
+            write_flow_modules_pptx(pptx)
+
+            profile = analyze_pptx(pptx)
+            registry = build_reusable_visual_registry(pptx, min_occurrences=2)
+            briefs = build_imagegen_briefs(profile, registry)
+
+        ids = {brief["id"] for brief in briefs["asset_briefs"]}
+        prompts = "\n".join(brief["prompt"] for brief in briefs["asset_briefs"])
+        self.assertIn("vector-like-flow-elements", ids)
+        self.assertIn("vector-like-module-panels", ids)
+        self.assertIn("flow_arrow:chevron", briefs["style_fingerprint"]["reusable_geometry"])
+        self.assertIn("transparent-background sheet", prompts)
+        self.assertIn("No text, no captions, no logos", prompts)
+
     def test_pptx_to_html_supports_motion_and_image_optimization(self):
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)

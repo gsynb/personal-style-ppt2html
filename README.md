@@ -15,7 +15,7 @@ It can be used by Codex, Claude Code, or any agent/runtime that can read a `SKIL
 - Preserve slide-master elements and detect manually repeated visual blocks that are not stored in layouts.
 - Build an `asset-registry.json` of reusable visual candidates with semantic roles, source levels, slide coverage, exact bounds, geometry, connector arrowheads, and confidence.
 - Detect reusable flow grammar from PPTX shapes, including chevrons, home plates, connector arrows, text modules, and module boxes.
-- Build an `imagegen-briefs.json` prompt pack for optional style-matched generated backgrounds, divider motifs, and backplate textures when the active agent has image generation tools.
+- Build an `imagegen-briefs.json` prompt pack for optional style-matched generated backgrounds, divider motifs, backplate textures, and transparent vector-like element sheets when the active agent has image generation tools.
 - Extract typography, theme colors, slide size, title positions, citation-footers, image density, and common layout patterns from prior decks.
 - Copy embedded PPTX media into local HTML assets.
 - Generate CSS design tokens from the extracted style profile.

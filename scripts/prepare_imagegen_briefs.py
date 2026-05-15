@@ -42,6 +42,20 @@ def _registry_roles(registry: dict[str, Any] | None) -> list[str]:
     return sorted(roles, key=lambda role: (-roles[role], role))
 
 
+def _registry_geometry_summary(registry: dict[str, Any] | None, limit: int = 10) -> list[str]:
+    if not registry:
+        return []
+    counts = Counter()
+    for element in registry.get("reusable_elements", []):
+        if not isinstance(element, dict):
+            continue
+        role = element.get("role")
+        geometry = element.get("geometry")
+        if role in {"flow_arrow", "flow_connector", "text_module", "module_box"} and geometry:
+            counts[f"{role}:{geometry}"] += 1
+    return [name for name, _ in counts.most_common(limit)]
+
+
 def _layout_classes(profile: dict[str, Any]) -> list[str]:
     classes = Counter()
     for slide in profile.get("slides", []):
@@ -87,6 +101,7 @@ def _style_fingerprint(
         "aspect_ratio": canvas.get("aspect_ratio_label") or "16:9",
         "layout_classes": _layout_classes(profile),
         "reusable_roles": _registry_roles(registry),
+        "reusable_geometry": _registry_geometry_summary(registry),
         "citation_footer_slides": summary.get("citation_footer_slides", 0),
         "title_terms": _title_terms(profile) if include_title_cues else [],
         "content_cue_policy": "title-cues-included" if include_title_cues else "raw-slide-titles-excluded",
@@ -107,6 +122,16 @@ def _base_style_sentence(fingerprint: dict[str, Any]) -> str:
         f"{colors['muted']}, {fingerprint['aspect_ratio']} landscape composition, dominant font mood "
         f"{fingerprint['dominant_font']}, layout rhythm: {layouts}, observed reusable roles: {roles}, "
         f"{topic_clause}"
+    )
+
+
+def _shape_grammar_sentence(fingerprint: dict[str, Any]) -> str:
+    geometry = ", ".join(fingerprint.get("reusable_geometry", [])[:8])
+    if not geometry:
+        geometry = "rectangular modules, rounded module boxes, thin connector lines, and simple directional arrows"
+    return (
+        "Use the extracted reusable PPTX shape grammar as inspiration: "
+        f"{geometry}. Keep shapes modular, clean, and easy to crop or place in HTML."
     )
 
 
@@ -177,6 +202,46 @@ def build_imagegen_briefs(
             "integration_hint": "Use behind content panels or figure frames with opacity below 0.18.",
         },
     ]
+
+    roles = set(fingerprint.get("reusable_roles", []))
+    if roles.intersection({"flow_arrow", "flow_connector", "text_module", "module_box"}):
+        shape_sentence = _shape_grammar_sentence(fingerprint)
+        briefs.extend(
+            [
+                {
+                    "id": "vector-like-flow-elements",
+                    "asset_type": "raster element sheet",
+                    "safe_to_generate": True,
+                    "output_filename": f"{generated}/style-flow-elements.png",
+                    "usage": "Reusable non-factual arrows, chevrons, connectors, and process-flow accents for HTML slides.",
+                    "prompt": (
+                        "Create a transparent-background sheet of reusable vector-like academic presentation elements. "
+                        f"{style_sentence} {shape_sentence} Include several chevrons, home-plate arrows, slim "
+                        "connector arrows, small corner markers, and quiet accent rules. Use clean flat fills, crisp "
+                        "edges, restrained shadows only if needed, and generous spacing between elements for later "
+                        "cropping. "
+                        f"{negative}"
+                    ),
+                    "integration_hint": "Crop individual elements or use the full sheet as a source image; decorative only, never for factual diagrams.",
+                },
+                {
+                    "id": "vector-like-module-panels",
+                    "asset_type": "raster element sheet",
+                    "safe_to_generate": True,
+                    "output_filename": f"{generated}/style-module-panels.png",
+                    "usage": "Reusable non-factual module boxes, timeline cards, and emphasis panels for HTML slides.",
+                    "prompt": (
+                        "Create a transparent-background sheet of reusable vector-like module panels for serious "
+                        f"academic HTML slides. {style_sentence} {shape_sentence} Include rounded rectangles, "
+                        "outlined content panels, small label tabs, low-contrast callout blocks, and timeline nodes. "
+                        "Leave every module blank with no embedded text, icons, numbers, or labels so HTML text can "
+                        "be placed above it. "
+                        f"{negative}"
+                    ),
+                    "integration_hint": "Use as decorative blank panels beneath editable HTML text; keep opacity and contrast conservative.",
+                },
+            ]
+        )
 
     return {
         "schema_version": "1.0",
