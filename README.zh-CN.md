@@ -13,7 +13,8 @@
 - 把 `.pptx` 转成可翻页的 HTML slide preview。
 - 保留 PPTX 中可复用的 slide-layout 元素，例如单位 logo、顶部横条、底部规则线、页眉页脚视觉标识。
 - 保留 slide-master 元素，并检测那些没有放在 layout 里、但被手动复制到多页的重复视觉块。
-- 生成 `asset-registry.json`，记录可复用视觉候选项的语义角色、来源层级、覆盖页码、精确坐标和置信度。
+- 生成 `asset-registry.json`，记录可复用视觉候选项的语义角色、来源层级、覆盖页码、精确坐标、几何形状、连接箭头端点和置信度。
+- 从 PPTX 形状中识别可复用流程语法，包括 chevron、homePlate、连接箭头、文字模块和形状模块。
 - 生成 `imagegen-briefs.json`，当当前 agent 具备生图工具时，可据此生成与 PPT 风格相似的背景、分隔页 motif 和内容 backplate。
 - 从历史 PPTX 中提取字体、主题色、页面比例、标题位置、citation footer、图片密度和常见页面布局。
 - 把 PPTX 内嵌媒体复制到本地 HTML assets。

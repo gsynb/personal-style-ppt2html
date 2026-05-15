@@ -38,7 +38,7 @@ Create restrained, institution-aware academic HTML presentations or research not
    Use `--motion none` for the most conservative output.
 
 4. **Lock the design system.** Use `style-profile.json` for font, color, title alignment, citation placement, image density, common layout classes, and whether motion should be `none`, `subtle`, `recording`, or `demo`. Do not copy bad artifacts blindly; preserve the user's serious academic taste.
-5. **Mine reusable visuals.** Use `asset-registry.json` to distinguish inherited assets (`slide_master`, `slide_layout`) from manually repeated slide-local objects (`manual_repeat`). Treat the registry as evidence, not as an automatic permission to reuse factual figures.
+5. **Mine reusable visuals.** Use `asset-registry.json` to distinguish inherited assets (`slide_master`, `slide_layout`) from manually repeated slide-local objects (`manual_repeat`). Look for logos/rules/bands plus reusable flow grammar such as `flow_arrow`, `flow_connector`, `text_module`, and `module_box`. Treat the registry as evidence, not as an automatic permission to reuse factual figures.
 6. **Generate optional style-matched assets.** If the current agent exposes an image generation tool or API, read `imagegen-briefs.json` and generate only the safe briefs marked `safe_to_generate`. Save project-bound outputs under the final HTML folder's `assets/generated/`, record provenance, and wire them as low-opacity cover backgrounds, section motifs, or figure backplates. Use decorative images with `alt=""` and `aria-hidden="true"` unless the user assigns semantic meaning. If image generation is unavailable, keep the briefs as prompts and continue without blocking the HTML conversion. Do not include raw slide-title cues in generation unless the user explicitly asks for topic-aware motifs and the text is safe.
 7. **Build from the template.** Copy `assets/academic-html-template/`, replace placeholder content, and load generated tokens after base styles:
 
@@ -89,7 +89,7 @@ Treat the extracted profile as a starting point:
 - `slides[].title_candidate`: title position and alignment.
 - `slides[].layout_class`: reusable rhythm such as `figure-explanation-slide`, `diagram-or-flow`, or `centered-title-with-footer-citation`.
 - `style_summary`: evidence of image-heavy slides, bilingual slides, and citation-footer habits.
-- `asset-registry.json`: reusable visual candidates, source levels, semantic roles, confidence, slide coverage, and exact bounds.
+- `asset-registry.json`: reusable visual candidates, source levels, semantic roles, confidence, slide coverage, geometry, connector arrowheads, and exact bounds.
 - `imagegen-briefs.json`: optional safe prompts for generated cover backgrounds, section-divider motifs, and backplate textures that match the extracted color, layout, and reusable-role evidence.
 
 If the profile conflicts with the user's stated target, follow the user's target and document the intentional deviation.

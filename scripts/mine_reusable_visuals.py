@@ -31,6 +31,53 @@ from pptx_common import (
     target_hash as _target_hash,
 )
 
+FLOW_ARROW_GEOMETRIES = {
+    "chevron",
+    "homePlate",
+    "rightArrow",
+    "leftArrow",
+    "upArrow",
+    "downArrow",
+    "leftRightArrow",
+    "quadArrow",
+    "bentArrow",
+    "bentUpArrow",
+    "stripedRightArrow",
+    "notchedRightArrow",
+    "blockArc",
+}
+
+CONNECTOR_GEOMETRIES = {"line", "straightConnector1", "bentConnector2", "bentConnector3", "curvedConnector2", "curvedConnector3"}
+MODULE_BOX_GEOMETRIES = {"rect", "roundRect", "round1Rect", "round2SameRect", "snip1Rect", "snip2SameRect"}
+STYLE_GRAMMAR_ROLES = {"flow_arrow", "flow_connector", "connector_line", "text_module", "module_box"}
+
+
+def _preset_geometry(shape: ET.Element) -> str | None:
+    prst = shape.find(".//a:prstGeom", NS)
+    return prst.get("prst") if prst is not None else None
+
+
+def _line_style(shape: ET.Element) -> dict[str, str | int | None]:
+    line = shape.find(".//a:ln", NS)
+    if line is None:
+        return {"line_width": None, "arrow_head": None, "arrow_tail": None}
+    width: int | None
+    try:
+        width = int(line.get("w")) if line.get("w") else None
+    except ValueError:
+        width = None
+    head = line.find("a:headEnd", NS)
+    tail = line.find("a:tailEnd", NS)
+    return {
+        "line_width": width,
+        "arrow_head": head.get("type") if head is not None else None,
+        "arrow_tail": tail.get("type") if tail is not None else None,
+    }
+
+
+def _has_arrow_end(record: dict[str, Any]) -> bool:
+    return bool(record.get("arrow_head") or record.get("arrow_tail"))
+
 
 def _shape_visual(shape: ET.Element) -> dict[str, str]:
     sppr = shape.find("p:spPr", NS)
@@ -55,14 +102,25 @@ def _infer_role(record: dict[str, Any], canvas: dict[str, float | str]) -> str:
     box_height = bounds["height"]
     width_ratio = box_width / width
     height_ratio = box_height / height
+    geometry = record.get("geometry")
 
     if record["element_type"] == "image":
         if left < width * 0.16 and top < height * 0.22 and width_ratio < 0.22 and height_ratio < 0.28:
             return "institution_logo"
         return "reusable_image"
+    if record["element_type"] == "connector":
+        if _has_arrow_end(record):
+            return "flow_connector"
+        return "connector_line"
+    if geometry in FLOW_ARROW_GEOMETRIES:
+        return "flow_arrow"
     if record["element_type"] == "text":
         if top > height * 0.72 and _is_citation(record.get("text", "")):
             return "citation_footer"
+        if geometry in MODULE_BOX_GEOMETRIES and (
+            record.get("fill") != "transparent" or record.get("line") != "transparent"
+        ):
+            return "text_module"
         return "repeated_text"
     if width_ratio > 0.6 and height_ratio <= 0.045:
         if top < height * 0.28:
@@ -74,6 +132,10 @@ def _infer_role(record: dict[str, Any], canvas: dict[str, float | str]) -> str:
             return "header_band"
         if top > height * 0.64:
             return "footer_band"
+    if geometry in MODULE_BOX_GEOMETRIES and (
+        record.get("fill") != "transparent" or record.get("line") != "transparent"
+    ):
+        return "module_box"
     return "reusable_shape"
 
 
@@ -123,15 +185,33 @@ def _collect_tree_elements(
                 continue
             text = _shape_text(child)
             visual = _shape_visual(child)
+            line_style = _line_style(child)
             record.update(
                 {
                     "element_type": "text" if text else "shape",
                     "text": text,
                     "fill": visual["fill"],
                     "line": visual["line"],
+                    "geometry": _preset_geometry(child),
+                    **line_style,
                 }
             )
             if not text and visual["fill"] == "transparent" and visual["line"] == "transparent":
+                continue
+        elif tag == "cxnSp":
+            visual = _shape_visual(child)
+            line_style = _line_style(child)
+            record.update(
+                {
+                    "element_type": "connector",
+                    "text": "",
+                    "fill": visual["fill"],
+                    "line": visual["line"],
+                    "geometry": _preset_geometry(child) or "connector",
+                    **line_style,
+                }
+            )
+            if visual["line"] == "transparent" and not _has_arrow_end(record):
                 continue
         else:
             continue
@@ -142,14 +222,36 @@ def _collect_tree_elements(
 
 def _signature(record: dict[str, Any]) -> str:
     box = _rounded_box(record["bounds_px"])
+    size = _rounded_box(
+        {
+            "left": 0,
+            "top": 0,
+            "width": record["bounds_px"]["width"],
+            "height": record["bounds_px"]["height"],
+        }
+    )
     source_level = record["source_level"]
     element_type = record["element_type"]
+    role = record.get("role")
     if element_type == "image":
         identity = record.get("media_sha1") or record.get("media") or ""
     elif element_type == "text":
+        if role == "text_module":
+            identity = f"{role}|{record.get('geometry')}|{record.get('fill')}|{record.get('line')}|{size}"
+            return f"{source_level}:{element_type}:{identity}"
         identity = re.sub(r"\s+", " ", record.get("text", "")).strip().lower()[:120]
+    elif element_type == "connector":
+        identity = (
+            f"{record.get('geometry')}|{record.get('line')}|{record.get('line_width')}|"
+            f"{record.get('arrow_head')}|{record.get('arrow_tail')}|{size}"
+        )
+        if role in {"flow_connector", "connector_line"}:
+            return f"{source_level}:{element_type}:{identity}"
     else:
-        identity = f"{record.get('fill')}|{record.get('line')}"
+        if role in {"flow_arrow", "module_box"}:
+            identity = f"{role}|{record.get('geometry')}|{record.get('fill')}|{record.get('line')}|{size}"
+            return f"{source_level}:{element_type}:{identity}"
+        identity = f"{record.get('geometry')}|{record.get('fill')}|{record.get('line')}"
     return f"{source_level}:{element_type}:{identity}:{box}"
 
 
@@ -166,6 +268,12 @@ def _confidence(group: list[dict[str, Any]]) -> float:
     role = group[0]["role"]
     if source_level in {"slide_master", "slide_layout"} and role in {"institution_logo", "header_rule", "footer_rule"}:
         return 0.96
+    if role in {"flow_arrow", "flow_connector", "text_module", "module_box"} and len(
+        {item["slide_number"] for item in group}
+    ) >= 3:
+        return 0.88
+    if role in STYLE_GRAMMAR_ROLES:
+        return 0.68
     if source_level in {"slide_master", "slide_layout"}:
         return 0.9
     if len({item["slide_number"] for item in group}) >= 3:
@@ -213,9 +321,9 @@ def build_reusable_visual_registry(pptx: str | Path, min_occurrences: int = 2) -
     for group in groups.values():
         source_level = group[0]["source_level"]
         slide_numbers = sorted({item["slide_number"] for item in group})
-        if source_level == "slide" and len(slide_numbers) < min_occurrences:
-            continue
         first = group[0]
+        if source_level == "slide" and len(slide_numbers) < min_occurrences and first["role"] not in STYLE_GRAMMAR_ROLES:
+            continue
         reusable.append(
             {
                 "id": f"reusable-{len(reusable) + 1:03d}",
@@ -228,8 +336,13 @@ def build_reusable_visual_registry(pptx: str | Path, min_occurrences: int = 2) -
                 "part_paths": sorted({item["part_path"] for item in group}),
                 "bounds_px": first["bounds_px"],
                 "bounds_norm": first["bounds_norm"],
+                "match_strategy": "style_geometry" if first["role"] in STYLE_GRAMMAR_ROLES and source_level == "slide" else "exact_geometry",
                 "fill": first.get("fill"),
                 "line": first.get("line"),
+                "geometry": first.get("geometry"),
+                "line_width": first.get("line_width"),
+                "arrow_head": first.get("arrow_head"),
+                "arrow_tail": first.get("arrow_tail"),
                 "media": first.get("media"),
                 "media_sha1": first.get("media_sha1"),
                 "text_preview": first.get("text", "")[:160],
@@ -244,6 +357,10 @@ def build_reusable_visual_registry(pptx: str | Path, min_occurrences: int = 2) -
         "footer_rule": 3,
         "footer_band": 4,
         "citation_footer": 5,
+        "flow_arrow": 6,
+        "flow_connector": 7,
+        "text_module": 8,
+        "module_box": 9,
     }
     reusable.sort(key=lambda item: (role_order.get(item["role"], 20), -item["occurrence_count"], item["id"]))
     for index, item in enumerate(reusable, start=1):

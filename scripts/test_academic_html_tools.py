@@ -214,6 +214,36 @@ MANUAL_FOOTER_SHAPE_XML = """\
     </p:sp>
 """
 
+FLOW_MODULES_XML = """\
+    <p:sp>
+      <p:spPr>
+        <a:xfrm><a:off x="1828800" y="1828800"/><a:ext cx="1524000" cy="457200"/></a:xfrm>
+        <a:prstGeom prst="chevron"><a:avLst/></a:prstGeom>
+        <a:solidFill><a:srgbClr val="C00000"/></a:solidFill>
+        <a:ln w="12700"><a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill></a:ln>
+      </p:spPr>
+    </p:sp>
+    <p:sp>
+      <p:spPr>
+        <a:xfrm><a:off x="3657600" y="1828800"/><a:ext cx="2133600" cy="731520"/></a:xfrm>
+        <a:prstGeom prst="roundRect"><a:avLst/></a:prstGeom>
+        <a:solidFill><a:srgbClr val="F7F7F7"/></a:solidFill>
+        <a:ln w="9525"><a:solidFill><a:srgbClr val="C00000"/></a:solidFill></a:ln>
+      </p:spPr>
+      <p:txBody><a:p><a:r><a:rPr sz="1800"><a:latin typeface="微软雅黑"/></a:rPr><a:t>关键任务</a:t></a:r></a:p></p:txBody>
+    </p:sp>
+    <p:cxnSp>
+      <p:spPr>
+        <a:xfrm><a:off x="6096000" y="1981200"/><a:ext cx="1219200" cy="0"/></a:xfrm>
+        <a:prstGeom prst="straightConnector1"><a:avLst/></a:prstGeom>
+        <a:ln w="19050">
+          <a:solidFill><a:srgbClr val="C00000"/></a:solidFill>
+          <a:headEnd type="triangle"/>
+        </a:ln>
+      </p:spPr>
+    </p:cxnSp>
+"""
+
 
 def write_minimal_pptx(path: Path) -> None:
     with zipfile.ZipFile(path, "w") as zf:
@@ -237,6 +267,10 @@ def write_layout_pptx(path: Path) -> None:
 
 def add_manual_footer(xml: str) -> str:
     return xml.replace("  </p:spTree></p:cSld>", MANUAL_FOOTER_SHAPE_XML + "  </p:spTree></p:cSld>")
+
+
+def add_flow_modules(xml: str) -> str:
+    return xml.replace("  </p:spTree></p:cSld>", FLOW_MODULES_XML + "  </p:spTree></p:cSld>")
 
 
 def write_master_and_repeat_pptx(path: Path) -> None:
@@ -282,6 +316,21 @@ def write_duplicate_media_pptx(path: Path) -> None:
         zf.writestr("ppt/slides/slide1.xml", SLIDE_1_XML)
         zf.writestr("ppt/media/image1.png", b"same-image")
         zf.writestr("ppt/media/image2.png", b"same-image")
+
+
+def write_flow_modules_pptx(path: Path) -> None:
+    with zipfile.ZipFile(path, "w") as zf:
+        zf.writestr("ppt/presentation.xml", PRESENTATION_XML)
+        zf.writestr("ppt/theme/theme1.xml", THEME_XML)
+        zf.writestr("ppt/slides/slide1.xml", add_flow_modules(SLIDE_1_XML))
+        zf.writestr("ppt/slides/slide2.xml", add_flow_modules(SLIDE_2_XML))
+
+
+def write_single_flow_modules_pptx(path: Path) -> None:
+    with zipfile.ZipFile(path, "w") as zf:
+        zf.writestr("ppt/presentation.xml", PRESENTATION_XML)
+        zf.writestr("ppt/theme/theme1.xml", THEME_XML)
+        zf.writestr("ppt/slides/slide1.xml", add_flow_modules(SLIDE_1_XML))
 
 
 class AcademicHtmlToolTests(unittest.TestCase):
@@ -477,6 +526,32 @@ class AcademicHtmlToolTests(unittest.TestCase):
                 for element in elements
             )
         )
+
+    def test_reusable_visual_registry_labels_flow_arrows_connectors_and_modules(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            pptx = Path(tmp) / "flow-modules.pptx"
+            write_flow_modules_pptx(pptx)
+
+            registry = build_reusable_visual_registry(pptx, min_occurrences=2)
+
+        elements = registry["reusable_elements"]
+        by_role = {element["role"]: element for element in elements}
+        self.assertEqual(by_role["flow_arrow"]["geometry"], "chevron")
+        self.assertEqual(by_role["flow_connector"]["element_type"], "connector")
+        self.assertEqual(by_role["flow_connector"]["arrow_head"], "triangle")
+        self.assertEqual(by_role["text_module"]["geometry"], "roundRect")
+
+    def test_reusable_visual_registry_keeps_single_slide_flow_grammar(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            pptx = Path(tmp) / "single-flow-modules.pptx"
+            write_single_flow_modules_pptx(pptx)
+
+            registry = build_reusable_visual_registry(pptx, min_occurrences=2)
+
+        roles = {element["role"] for element in registry["reusable_elements"]}
+        self.assertIn("flow_arrow", roles)
+        self.assertIn("flow_connector", roles)
+        self.assertIn("text_module", roles)
 
     def test_prepare_imagegen_briefs_uses_style_evidence_and_safety_boundary(self):
         with tempfile.TemporaryDirectory() as tmp:
