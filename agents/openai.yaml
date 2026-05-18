@@ -1,4 +1,4 @@
 interface:
   display_name: "Personal Style PPT2HTML"
-  short_description: "Convert personal PPTX style into academic HTML slides and assets"
-  default_prompt: "Use $personal-style-ppt2html to turn my reference PPTX into a serious academic HTML presentation that preserves my personal style, reusable layout assets, restrained motion, and optional safe generated visual assets."
+  short_description: "Convert PPTX style into faithful academic HTML slides and reusable assets"
+  default_prompt: "Use $personal-style-ppt2html to turn my reference PPTX into a serious academic HTML presentation that preserves exact master/layout geometry, reusable slide assets, restrained motion, and safe generated reusable visual assets when available."
