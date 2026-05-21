@@ -23,6 +23,7 @@ It can be used by Codex, Claude Code, or any agent/runtime that can read a `SKIL
 - Optimize generated HTML with local assets, lazy image loading, async image decoding, reduced-motion support, and print-safe CSS.
 - Provide a restrained academic HTML template for talks, group meetings, paper reading reports, thesis defenses, and research notes.
 - Audit generated HTML for basic structure, print support, motion safety, and slide container correctness.
+- Scaffold task workspaces with planning files for claim spines, proof objects, non-destructive revisions, locked slides, image preferences, reproducible figures, and validation evidence.
 
 ## Why This Exists
 
@@ -68,13 +69,18 @@ When an agent runtime exposes image generation, the workflow can also create non
 ├── references/
 │   ├── academic-style-rules.md
 │   ├── animation-and-optimization.md
+│   ├── authoring-workflow.md
+│   ├── figure-reproducibility.md
 │   ├── html-layout-patterns.md
 │   ├── imagegen-asset-guidelines.md
 │   ├── institution-brand-rules.md
+│   ├── quality-gates.md
+│   ├── revision-safety.md
 │   └── reusable-visual-mining.md
 └── scripts/
     ├── audit_html_layout.py
     ├── build_theme_css.py
+    ├── create_workspace.py
     ├── extract_pptx_style.py
     ├── make_asset_manifest.py
     ├── mine_reusable_visuals.py
@@ -88,6 +94,12 @@ When an agent runtime exposes image generation, the workflow can also create non
 ## Quick Start
 
 Use Python 3. No required third-party package is needed for the core XML parsing path.
+
+For multi-turn or revision-heavy work, start with a workspace:
+
+```bash
+python scripts/create_workspace.py work/my-deck --profile group-meeting --language zh --slides 12
+```
 
 For the full workflow:
 
@@ -195,6 +207,7 @@ The tests cover:
 - slide-master preservation and reusable visual registry mining,
 - master/layout duplicate filtering and placeholder cleanup,
 - motion preset output, optimized image attributes, and animation safety warnings.
+- workspace scaffolding for planning, non-destructive revisions, locked slides, and validation outputs.
 
 ## Current Limitations
 

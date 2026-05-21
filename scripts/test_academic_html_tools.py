@@ -17,6 +17,7 @@ from audit_html_layout import audit_html_file
 from pptx_to_academic_html import convert_pptx_to_html
 from mine_reusable_visuals import build_reusable_visual_registry
 from prepare_imagegen_briefs import build_imagegen_briefs
+from create_workspace import create_workspace
 
 
 PRESENTATION_XML = """\
@@ -334,6 +335,35 @@ def write_single_flow_modules_pptx(path: Path) -> None:
 
 
 class AcademicHtmlToolTests(unittest.TestCase):
+    def test_create_workspace_scaffolds_revision_planning_and_outputs(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp) / "mlip-html-deck"
+            manifest = create_workspace(workspace, profile="group-meeting", language="zh", slides=15)
+
+            self.assertEqual(manifest["profile"], "group-meeting")
+            self.assertEqual(manifest["language"], "zh")
+            self.assertEqual(manifest["planned_slides"], 15)
+            self.assertTrue((workspace / "source").is_dir())
+            self.assertTrue((workspace / "work" / "style-extract").is_dir())
+            self.assertTrue((workspace / "output" / "versions").is_dir())
+            self.assertTrue((workspace / "validation" / "screenshots").is_dir())
+            self.assertTrue((workspace / "planning" / "claim-spine.md").exists())
+            self.assertTrue((workspace / "planning" / "proof-objects.md").exists())
+            self.assertTrue((workspace / "planning" / "revision-log.md").exists())
+            self.assertTrue((workspace / "planning" / "locked-slides.json").exists())
+            self.assertTrue((workspace / "personal_style_ppt2html_task.json").exists())
+
+    def test_create_workspace_does_not_overwrite_existing_planning_files(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp) / "deck"
+            existing = workspace / "planning" / "revision-log.md"
+            existing.parent.mkdir(parents=True)
+            existing.write_text("keep this revision history", encoding="utf-8")
+
+            create_workspace(workspace)
+
+            self.assertEqual(existing.read_text(encoding="utf-8"), "keep this revision history")
+
     def test_analyze_pptx_extracts_style_signals(self):
         with tempfile.TemporaryDirectory() as tmp:
             pptx = Path(tmp) / "sample.pptx"

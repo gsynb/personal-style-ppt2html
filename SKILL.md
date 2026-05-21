@@ -1,11 +1,11 @@
 ---
 name: personal-style-ppt2html
-description: Use when converting PPTX decks into serious academic HTML presentations, faithful PPTX-style HTML slide decks, video-ready slide previews, reusable personal-style templates, or style-matched generated reusable assets, especially when prior decks contain slide-layout logos, institution marks, header rules, scientific figures, citations, equations, or research-note material. Use strict master-layout fidelity when the user asks to mimic, reproduce, copy, or match the original PPT style. Do not use for raw pixel-perfect PowerPoint rendering or decorative marketing decks.
+description: Use when converting PPTX decks into serious academic HTML presentations, faithful PPTX-style HTML slide decks, video-ready slide previews, reusable personal-style templates, non-destructive revisions, or style-matched generated reusable assets, especially when prior decks contain slide-layout logos, institution marks, header rules, scientific figures, citations, equations, charts, or research-note material. Use strict master-layout fidelity when the user asks to mimic, reproduce, copy, or match the original PPT style. Do not use for raw pixel-perfect PowerPoint rendering or decorative marketing decks.
 ---
 
 # Personal Style PPT2HTML
 
-Create restrained, institution-aware academic HTML presentations or research notes by extracting the user's prior PPTX style, preserving reusable master/layout geometry, generating safe reusable visual assets when available, and building editable HTML around evidence-first layouts.
+Create restrained, institution-aware academic HTML presentations or research notes by extracting the user's prior PPTX style, preserving reusable master/layout geometry, generating safe reusable visual assets when available, and building editable HTML around evidence-first layouts. Preserve the skill's core strength: evidence from the reference PPTX controls the master layer; planning, revisions, and generated assets must fit inside that extracted system.
 
 ## Fidelity Modes
 
@@ -19,7 +19,13 @@ In `master-faithful` mode, do not approximate recurring PPTX elements from memor
 
 ## Workflow
 
-1. **Collect sources.** Identify reference PPTX files, research notes, figures, citations, unit/lab assets, requested output mode (`slides`, `notes`, or `recording`), and fidelity mode (`master-faithful` unless the user clearly wants loose inspiration).
+1. **Collect sources.** Identify reference PPTX files, research notes, figures, citations, unit/lab assets, requested output mode (`slides`, `notes`, or `recording`), and fidelity mode (`master-faithful` unless the user clearly wants loose inspiration). For multi-turn or revision-heavy tasks, create a task workspace first:
+
+   ```bash
+   python scripts/create_workspace.py work/my-deck --profile group-meeting --language zh --slides 12
+   ```
+
+   Use `planning/revision-log.md`, `planning/locked-slides.json`, and `planning/image-preferences.md` when continuing a deck the user may have edited.
 2. **Choose the path.**
 
    | User goal | Required command | Optional commands |
@@ -48,23 +54,25 @@ In `master-faithful` mode, do not approximate recurring PPTX elements from memor
 
    Use `--motion none` for the most conservative output.
 
-4. **Lock the design system.** Use `style-profile.json` for font, color, title alignment, citation placement, image density, common layout classes, and whether motion should be `none`, `subtle`, `recording`, or `demo`. Do not copy bad artifacts blindly; preserve the user's serious academic taste.
-5. **Mine reusable visuals.** Use `asset-registry.json` to distinguish inherited assets (`slide_master`, `slide_layout`) from manually repeated slide-local objects (`manual_repeat`). Look for logos/rules/bands plus reusable flow grammar such as `flow_arrow`, `flow_connector`, `text_module`, and `module_box`. Treat the registry as evidence, not as an automatic permission to reuse factual figures.
-6. **Build the master layer first.** In `master-faithful` mode, create a reusable HTML/CSS master layer from `asset-registry.json` before writing slide content:
+4. **Plan content as claims.** When creating new slide content from notes, outlines, or a topic list, read `references/authoring-workflow.md`. Write a claim spine and map each claim to a proof object before laying out slides. This planning step must not override extracted master geometry.
+5. **Lock the design system.** Use `style-profile.json` for font, color, title alignment, citation placement, image density, common layout classes, and whether motion should be `none`, `subtle`, `recording`, or `demo`. Do not copy bad artifacts blindly; preserve the user's serious academic taste.
+6. **Mine reusable visuals.** Use `asset-registry.json` to distinguish inherited assets (`slide_master`, `slide_layout`) from manually repeated slide-local objects (`manual_repeat`). Look for logos/rules/bands plus reusable flow grammar such as `flow_arrow`, `flow_connector`, `text_module`, and `module_box`. Treat the registry as evidence, not as an automatic permission to reuse factual figures.
+7. **Build the master layer first.** In `master-faithful` mode, create a reusable HTML/CSS master layer from `asset-registry.json` before writing slide content:
    - Place `institution_logo`, `header_rule`, `footer_band`, recurring gray bands, title zones, and footer/citation zones using extracted `bounds_px` or `bounds_norm`.
    - Convert the PPTX canvas, usually 1280x720 for 16:9 exports, into CSS variables such as `--ppt-logo-left`, `--ppt-logo-top`, `--ppt-header-rule-top`, and `--ppt-content-top`.
    - Keep master element placement within 3 px of extracted 1280x720 coordinates unless an explicit responsive adaptation is needed.
    - Derive safe content boxes from the master layer. Main content must not overlap logos, header rules, title text, footer bands, or citation zones.
    - Prefer extracted media for official/institution marks. Never regenerate official logos.
-7. **Generate reusable visual assets when possible.** If the current agent exposes a built-in image generation tool or configured API/CLI, execute this step; do not silently skip it.
+8. **Generate reusable visual assets when possible.** If the current agent exposes a built-in image generation tool or configured API/CLI, execute this step; do not silently skip it.
    - Read `imagegen-briefs.json` and generate every brief marked `safe_to_generate`, unless the user explicitly says not to use image generation.
    - Generate only non-factual, reusable assets: subdued cover backgrounds, section-divider motifs, lattice/network textures, blank method backplates, decorative arrows, module boxes, connector sheets, and abstract scientific patterns.
    - Save generated outputs under the final HTML folder's `assets/generated/`, record a small provenance file listing prompt source, generation date, and intended use, and wire useful assets into the deck.
    - Use decorative generated images with `alt=""` and `aria-hidden="true"` unless the user assigns semantic meaning.
    - If image generation is unavailable or blocked, keep the briefs in the work directory and explicitly report that generated reusable assets were not produced.
    - Do not generate or guess institution logos, published paper figures, charts, plots, experimental data, equations, or factual method diagrams.
-8. **Map new slides to reference layout families.** For each generated slide, choose the closest extracted reference layout class (`centered-title-with-footer-citation`, `image-led-explanation`, `diagram-or-flow`, `text-and-proof`, `single-figure-with-caption`, etc.). Adapt content inside that layout family instead of inventing unrelated card/grid systems.
-9. **Build from the template only after the master layer is fixed.** Copy `assets/academic-html-template/`, replace placeholder content, and load generated tokens after base styles:
+9. **Map new slides to reference layout families.** For each generated slide, choose the closest extracted reference layout class (`centered-title-with-footer-citation`, `image-led-explanation`, `diagram-or-flow`, `text-and-proof`, `single-figure-with-caption`, etc.). Adapt content inside that layout family instead of inventing unrelated card/grid systems.
+10. **Keep figures reproducible when data is involved.** If a slide includes CSV/Excel data, statistical tables, manuscript figures, chart screenshots, or requested chart polish, read `references/figure-reproducibility.md`. Keep chart code/data/source notes under `figures/` when using external plotting, and keep factual diagrams editable in HTML/SVG whenever practical.
+11. **Build from the template only after the master layer is fixed.** Copy `assets/academic-html-template/`, replace placeholder content, and load generated tokens after base styles:
 
    ```html
    <link rel="stylesheet" href="./theme.css">
@@ -72,14 +80,18 @@ In `master-faithful` mode, do not approximate recurring PPTX elements from memor
    <link rel="stylesheet" href="./theme.generated.css">
    ```
 
-10. **Use references only as needed.**
+12. **Use references only as needed.**
+   - `references/authoring-workflow.md`: claim spine, proof-object mapping, and source-to-slide rewriting.
    - `references/academic-style-rules.md`: tone, evidence discipline, visual restraint.
    - `references/html-layout-patterns.md`: slide/note patterns and responsive rules.
    - `references/institution-brand-rules.md`: school, lab, group, and logo handling.
    - `references/imagegen-asset-guidelines.md`: when generated raster assets are safe.
    - `references/animation-and-optimization.md`: restrained motion presets, video-ready output, image optimization, and animation audit rules.
    - `references/reusable-visual-mining.md`: asset registry semantics, manual-repeat detection, and optional vision review schema.
-11. **Validate.** Run:
+   - `references/figure-reproducibility.md`: chart/data/figure workflow and reproducibility rules.
+   - `references/revision-safety.md`: versioning, locked slides, user edits, and image habit tracking.
+   - `references/quality-gates.md`: final package, render, master-fidelity, and revision checks.
+13. **Validate.** Run:
 
    ```bash
    python scripts/audit_html_layout.py path/to/index.html
@@ -93,12 +105,15 @@ In `master-faithful` mode, do not approximate recurring PPTX elements from memor
    - Confirm generated reusable assets are subtle and do not obscure scientific content.
    - List any intentional deviations from the reference PPTX in the final response.
 
+   Before claiming completion, committing, or pushing, read `references/quality-gates.md` and verify the relevant checks with fresh evidence.
+
 ## Design Rules
 
 - Keep the first screen the actual presentation or research note, not a landing page.
 - Prefer white or near-white academic surfaces, one accent color, thin rules, aligned figures, and clear citations.
 - Use exact scientific labels, units, equations, figure captions, and bibliography details from user-provided sources.
 - Use editable HTML, SVG, Mermaid, MathJax, or chart libraries for factual diagrams and data.
+- Use claim titles and proof objects to improve clarity, but never move or resize extracted master elements to make a claim fit.
 - In `master-faithful` mode, master elements extracted from `slide_master` or `slide_layout` are hard geometry constraints, not style suggestions.
 - Use image generation, when available, for non-factual reusable assets such as restrained cover backgrounds, subtle lattice/network motifs, chapter dividers, blank module panels, connector/arrow sheets, or abstract backplates.
 - Never generate or guess institution logos, published paper figures, experimental data, or official brand marks.
@@ -138,6 +153,15 @@ Apply these rules whenever `master-faithful` mode is active:
 - If adapting for mobile, preserve order and identity of master elements, but allow stacked layout below the header.
 - If a high-confidence reusable element is hard to reproduce as editable HTML, extract and reuse it as an image asset rather than approximating it poorly.
 
+## Revision Safety Rules
+
+When revising a generated deck, preserve user edits by default:
+
+- Do not overwrite source PPTX files, prior delivered HTML folders, or user-edited HTML/CSS/JS unless explicitly requested.
+- Use `scripts/create_workspace.py` for multi-turn work and place revisions under `output/versions/`.
+- Read `planning/locked-slides.json` before modifying previously corrected slides.
+- If the user removes presenter identity, changes an image, or adjusts a layout, treat that as intentional and record it in the planning files when a workspace exists.
+
 ## Image Generation Boundary
 
 Use generated imagery as a style extension and reusable design system component, not as a replacement for extracted PPTX assets. Official logos, institution marks, paper figures, charts, plots, equations, and factual method diagrams must remain extracted, user-provided, or editable code-native assets.
@@ -163,6 +187,7 @@ Deliver a runnable HTML folder with local assets, stable CSS, and no hidden depe
 For `master-faithful` outputs, final reporting must include:
 
 - output folder path;
+- revision path and base path if this was an update to an existing deck;
 - whether image generation was used and where generated assets/provenance were saved;
 - validation commands run;
 - contact sheet/browser/visual review status;

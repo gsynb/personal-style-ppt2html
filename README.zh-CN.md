@@ -23,6 +23,7 @@
 - 对生成 HTML 做输出优化，包括本地资源、图片 lazy loading、异步解码、reduced-motion 支持和 print-safe CSS。
 - 提供严肃学术场景的 HTML 模板，适合组会、seminar、paper reading、答辩和科研记录。
 - 对生成的 HTML 做基础结构和动效安全审计，检查 viewport、print CSS、slide 容器、动效降级等。
+- 创建任务工作区，配套记录 claim spine、proof object、非破坏式修订、锁定页、图片偏好、可复现图表和验证证据。
 
 ## 为什么需要它
 
@@ -68,13 +69,18 @@
 ├── references/
 │   ├── academic-style-rules.md
 │   ├── animation-and-optimization.md
+│   ├── authoring-workflow.md
+│   ├── figure-reproducibility.md
 │   ├── html-layout-patterns.md
 │   ├── imagegen-asset-guidelines.md
 │   ├── institution-brand-rules.md
+│   ├── quality-gates.md
+│   ├── revision-safety.md
 │   └── reusable-visual-mining.md
 └── scripts/
     ├── audit_html_layout.py
     ├── build_theme_css.py
+    ├── create_workspace.py
     ├── extract_pptx_style.py
     ├── make_asset_manifest.py
     ├── mine_reusable_visuals.py
@@ -88,6 +94,12 @@
 ## 快速开始
 
 使用 Python 3。核心 XML 解析路径不依赖第三方包。
+
+如果是多轮修改、需要保留用户手动编辑，建议先创建任务工作区：
+
+```bash
+python scripts/create_workspace.py work/my-deck --profile group-meeting --language zh --slides 12
+```
 
 完整流程可以直接运行：
 
@@ -195,6 +207,7 @@ python scripts/test_academic_html_tools.py
 - slide-master 保留和可复用视觉 registry 挖掘；
 - master/layout 重复元素过滤和母版占位文本清理；
 - 动效预设输出、图片优化属性和动画安全警告。
+- 任务工作区脚手架，包括规划文件、非破坏式修订、锁定页和验证输出目录。
 
 ## 当前限制
 
